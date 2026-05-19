@@ -4,8 +4,8 @@
 HX711 sensor;
 
 // Pins
-const uint8_t dataPin = 3;
-const uint8_t clockPin = 2;
+const uint8_t DATA_PIN = 3;
+const uint8_t CLOCK_PIN = 2;
 
 // Parameters
 float g = 9.7976; // m/s^2, standard gravity
@@ -16,7 +16,7 @@ void waitforenter();
 
 void setup(){
   Serial.begin(9600);
-  sensor.begin(dataPin, clockPin);
+  sensor.begin(DATA_PIN, CLOCK_PIN);
   calibrate();
   Serial.println("timestamp_s,force_N,weight_g");
 }
