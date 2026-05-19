@@ -44,6 +44,27 @@ def get_experiment_metadata() -> dict:
     return {"variable": variable, "unit": unit, "notes": notes}
 
 
+def parse_float(value: str):
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def compute_efficiency(input_value: float, input_unit: str, stats: dict):
+    if input_value is None or input_value == 0:
+        return None
+
+    unit = input_unit.strip().lower()
+    if unit in ("n", "N", "newton", "newtons"):
+        return stats["mean_force_N"] / input_value
+    if unit in ("g", "gram", "grams"):
+        return stats["mean_force_g"] / input_value
+    if unit in ("kg", "kilogram", "kilograms"):
+        return stats["mean_force_g"] / (input_value * 1000.0)
+    return stats["mean_force_g"] / input_value
+
+
 # ── Live display ─────────────────────────────────────────────────────────────
 
 def show_live_until_enter(sensor: Sensor):
@@ -57,8 +78,8 @@ def show_live_until_enter(sensor: Sensor):
             line = sensor.readline()
             parsed = sensor.parse(line)
             if parsed:
-                _, f, w = parsed
-                print(f"    {f:+.5f} N  ({w:+.4f} g)", end="\r")
+                _, _, w = parsed
+                print(f"    {w:+.4f} g", end="\r")
 
     thread = threading.Thread(target=read_loop, daemon=True)
     thread.start()
@@ -108,14 +129,20 @@ def main():
         show_live_until_enter(sensor)
         readings = capture(sensor)
         stats    = compute_stats(readings)
+        input_value = parse_float(value)
+        epsilon = compute_efficiency(input_value, metadata["unit"], stats)
 
-        print(f"  → {stats['mean']:+.6f} ± {stats['std']:.6f} N  (n = {stats['n']})\n")
+        if epsilon is None:
+            print(f"  → {stats['mean_force_g']:+.6f} ± {stats['std_force_g']:.6f} g  (n = {stats['n']})\n")
+        else:
+            print(f"  → {stats['mean_force_g']:+.6f} ± {stats['std_force_g']:.6f} g  (ε = {epsilon:.3f}, {epsilon * 100:.1f}%)  (n = {stats['n']})\n")
 
         trials.append({
             "trial":         trial_n,
             variable:        value,
-            "mean_force_N":  stats["mean"],
-            "std_force_N":   stats["std"],
+            "mean_force_g":  stats["mean_force_g"],
+            "std_force_g":   stats["std_force_g"],
+            "epsilon":       epsilon,
             "n_samples":     stats["n"],
             "raw":           readings,
         })
@@ -126,8 +153,8 @@ def main():
         sensor.close()
         return
 
-    save_results(trials, metadata)
-    plot_results(trials, metadata)
+    exp_dir = save_results(trials, metadata)
+    plot_results(trials, metadata, exp_dir)
     sensor.close()
 
 
