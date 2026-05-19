@@ -12,6 +12,7 @@ void calibrate();
 
 void setup() {
     Serial.begin(9600);
+    while (!Serial);
     sensor.begin(DATA_PIN, CLOCK_PIN);
     calibrate();
     Serial.println("READY");
@@ -32,7 +33,7 @@ void calibrate() {
     // Step 1: wait for Python to confirm user removed all weight
     waitForEnter();
     sensor.tare(100);
-    Serial.print("OFFSET:");
+    Serial.println("OFFSET");
     Serial.println(sensor.get_offset());
 
     // Step 2: wait for Python to send known weight in grams
@@ -46,7 +47,7 @@ void calibrate() {
     }
     float force_N = weight_g / 1000.0f * GRAVITY;
     sensor.calibrate_scale(force_N, 100);
-    Serial.print("SCALE:");
+    Serial.println("SCALE");
     Serial.println(sensor.get_scale(), 6);
 }
 

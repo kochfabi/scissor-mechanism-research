@@ -9,27 +9,27 @@ from analysis import compute_stats, save_results, plot_results
 # ── Calibration ──────────────────────────────────────────────────────────────
 
 def run_calibration(sensor: Sensor):
+    def wait_for(prefix: str):
+        while True:
+            line = sensor.readline()
+            if not line:
+                continue
+            if line.startswith(prefix):
+                print("  ", line)
+                return line
+    
     print("\n=== CALIBRATION ===")
     input("  Remove all weight from the load cell, then press Enter...")
     sensor.send("")  # sends '\n' — triggers Arduino tare
-
-    while True:
-        line = sensor.readline()
-        if line.startswith("OFFSET:"):
-            print(f"  Tare done.   {line}")
-            break
+    wait_for("OFFSET")
 
     weight_g = input("  Place known calibration weight. Enter mass [g]: ").strip()
     sensor.send(weight_g)
+    wait_for("SCALE")
 
     while True:
         line = sensor.readline()
-        if line.startswith("SCALE:"):
-            print(f"  Scale set.   {line}")
-            break
-
-    while True:
-        if sensor.readline() == "READY":
+        if line == "READY":
             print("  Sensor ready.\n")
             break
 
