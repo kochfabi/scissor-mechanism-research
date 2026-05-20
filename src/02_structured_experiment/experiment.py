@@ -177,7 +177,7 @@ def main():
         if epsilon is None:
             print(f"  → {stats['mean_force_g']:+.6f} ± {stats['std_force_g']:.6f} g  (n = {stats['n']})\n")
         else:
-            print(f"  → {stats['mean_force_g']:+.6f} ± {stats['std_force_g']:.6f} g  (ε = {epsilon:.3f}, {epsilon * 100:.1f}%)  (n = {stats['n']})\n")
+            print(f"  → {stats['mean_force_g']:+.6f} ± {stats['std_force_g']:.6f} g  (ε = {epsilon:.3f})  (n = {stats['n']})\n")
 
         trials.append({
             "trial":         trial_n,

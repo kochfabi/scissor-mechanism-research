@@ -100,8 +100,19 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
     ax.legend(lines, labels, loc="upper left")
 
     notes = metadata.get("notes", "")
+    plot_notes = [
+        f"independent_variable={metadata['independent_variable']} [{metadata.get('independent_unit','')}]",
+        f"F_in={metadata.get('F_in','')} [{metadata.get('F_in_unit','')}]",
+        f"l_offset={metadata.get('l_offset','')}",
+        f"n_units={metadata.get('n_units','')}",
+        f"l_curve={metadata.get('l_curve','')}"
+    ]
     if notes:
-        fig.text(0.99, 0.01, f"Notes: {notes}",
+        plot_notes.insert(0, f"Notes: {notes}")
+    plot_text = " | ".join(x for x in plot_notes if x and x != " []")
+
+    if plot_text:
+        fig.text(0.99, 0.01, plot_text,
                  ha="right", va="bottom", fontsize=7, color="gray")
 
     plt.tight_layout()
@@ -124,8 +135,8 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         ax.set_title(f"Trial {t['trial']:02d}: {trial_label}")
         ax.grid(True, linestyle="--", alpha=0.5)
 
-        if notes:
-            fig.text(0.99, 0.01, f"Notes: {notes}",
+        if plot_text:
+            fig.text(0.99, 0.01, plot_text,
                      ha="right", va="bottom", fontsize=7, color="gray")
 
         plt.tight_layout()
