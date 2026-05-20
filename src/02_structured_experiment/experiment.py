@@ -38,10 +38,45 @@ def run_calibration(sensor: Sensor):
 
 def get_experiment_metadata() -> dict:
     print("=== EXPERIMENT SETUP ===")
-    variable = input("  Independent variable (e.g. F_in, l_offset, n_units, l_curve): ").strip()
-    unit     = input(f"  Unit for '{variable}': ").strip()
-    notes    = input("  Notes (Enter to skip): ").strip()
-    return {"variable": variable, "unit": unit, "notes": notes}
+    variable_map = {
+        "f_in": "F_in",
+        "l_offset": "l_offset",
+        "n_units": "n_units",
+        "l_curve": "l_curve",
+    }
+    while True:
+        choice = input(
+            "  Independent variable (F_in, l_offset, n_units, l_curve): "
+        ).strip().lower()
+        independent_variable = variable_map.get(choice)
+        if independent_variable:
+            break
+        print(f"  Invalid choice. Choose one of: {', '.join(variable_map.values())}")
+
+    independent_unit = input(f"  Unit for '{independent_variable}': ").strip()
+
+    if independent_variable == "F_in":
+        F_in = ""
+        F_in_unit = independent_unit
+    else:
+        F_in = input("  F_in (input force): ").strip()
+        F_in_unit = input("  Unit for F_in: ").strip()
+
+    l_offset = "" if independent_variable == "l_offset" else input("  l_offset (opening angle offset length): ").strip()
+    n_units = "" if independent_variable == "n_units" else input("  n_units (number of units): ").strip()
+    l_curve = "" if independent_variable == "l_curve" else input("  l_curve (curvilinear offset length): ").strip()
+    notes = input("  Notes (Enter to skip): ").strip()
+
+    return {
+        "independent_variable": independent_variable,
+        "independent_unit": independent_unit,
+        "F_in": F_in,
+        "F_in_unit": F_in_unit,
+        "l_offset": l_offset,
+        "n_units": n_units,
+        "l_curve": l_curve,
+        "notes": notes,
+    }
 
 
 def parse_float(value: str):
@@ -110,27 +145,34 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     sensor = Sensor()
-    run_calibration(sensor)
     metadata = get_experiment_metadata()
+    run_calibration(sensor)
 
-    variable = metadata["variable"]
+    independent_variable = metadata["independent_variable"]
     trials   = []
-    print(f"\n=== MEASUREMENT — varying {variable} ===")
+    print(f"\n=== MEASUREMENT — varying {independent_variable} ===")
     print("  For each trial: configure your setup, watch live readings, press Enter to capture.")
     print("  Type 'done' as the condition value to finish.\n")
 
     trial_n = 1
     while True:
         print(f"--- Trial {trial_n} ---")
-        value = input(f"  {variable} = ").strip()
+        value = input(f"  {independent_variable} = ").strip()
         if value.lower() == "done":
             break
 
         show_live_until_enter(sensor)
         readings = capture(sensor)
         stats    = compute_stats(readings)
-        input_value = parse_float(value)
-        epsilon = compute_efficiency(input_value, metadata["unit"], stats)
+
+        if independent_variable == "F_in":
+            input_value = parse_float(value)
+            efficiency_unit = metadata["independent_unit"]
+        else:
+            input_value = parse_float(metadata["F_in"])
+            efficiency_unit = metadata["F_in_unit"]
+
+        epsilon = compute_efficiency(input_value, efficiency_unit, stats)
 
         if epsilon is None:
             print(f"  → {stats['mean_force_g']:+.6f} ± {stats['std_force_g']:.6f} g  (n = {stats['n']})\n")
@@ -139,7 +181,7 @@ def main():
 
         trials.append({
             "trial":         trial_n,
-            variable:        value,
+            independent_variable: value,
             "mean_force_g":  stats["mean_force_g"],
             "std_force_g":   stats["std_force_g"],
             "epsilon":       epsilon,
