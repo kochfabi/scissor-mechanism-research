@@ -3,7 +3,7 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
-from config import OUTPUT_DIR
+from config import OUTPUT_DIR, CAPTURE_DURATION_S
 
 
 def compute_stats(readings: list) -> dict:
@@ -73,7 +73,7 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         x = list(range(len(trials)))
         numeric = False
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(8, 7))
     error_line = ax.errorbar(x, means, yerr=stds, fmt="o-", color="black",
                              ecolor="gray", elinewidth=1.5, capsize=5, label="F_out [g] ± std")
     ax.set_xlabel(f"{variable} [{unit}]" if unit else variable)
@@ -100,22 +100,32 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
     ax.legend(lines, labels, loc="upper left")
 
     notes = metadata.get("notes", "")
-    plot_notes = [
-        f"independent_variable={metadata['independent_variable']} [{metadata.get('independent_unit','')}]",
-        f"F_in={metadata.get('F_in','')} [{metadata.get('F_in_unit','')}]",
-        f"l_offset={metadata.get('l_offset','')}",
-        f"n_units={metadata.get('n_units','')}",
-        f"l_curve={metadata.get('l_curve','')}"
+    
+    # Notes (bottom left)
+    plot_notes_text = f"Notes: {notes}\n"
+    
+    # Variables (bottom right)
+    plot_variables = [
+        f"independent_variable = {metadata['independent_variable']} [{metadata.get('independent_unit','')}]",
+        f"F_in = {metadata.get('F_in','')} [{metadata.get('F_in_unit','')}]",
+        f"l_offset = {metadata.get('l_offset','')}",
+        f"n_units = {metadata.get('n_units','')}",
+        f"l_curve = {metadata.get('l_curve','')}",
+        f"capture_duration = {CAPTURE_DURATION_S}s"
     ]
-    if notes:
-        plot_notes.insert(0, f"Notes: {notes}")
-    plot_text = " | ".join(x for x in plot_notes if x and x != " []")
+    plot_variables_text = "\n".join(x for x in plot_variables if x and x != " []")
 
-    if plot_text:
-        fig.text(0.99, 0.01, plot_text,
-                 ha="right", va="bottom", fontsize=7, color="gray")
+    # Display notes on bottom left with better contrast
+    if notes or True:
+        fig.text(0.01, 0.01, plot_notes_text,
+                 ha="left", va="bottom", fontsize=9, color="darkgray")
+    
+    # Display variables on bottom right
+    if plot_variables_text:
+        fig.text(0.99, 0.01, plot_variables_text,
+                 ha="right", va="bottom", fontsize=9, color="darkgray")
 
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0.15, 1, 1])
     summary_path = os.path.join(output_dir, "plot.png")
     plt.savefig(summary_path, dpi=150)
     plt.show()
@@ -129,17 +139,49 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         trial_weights = [row[2] for row in t["raw"]]
 
         fig, ax = plt.subplots(figsize=(8, 5))
-        ax.plot(trial_times, trial_weights, marker="o", linestyle="-", color="black")
+        ax.plot(trial_times, trial_weights, marker="o", linestyle="-", color="black", label="F_out [g]")
+        
+        # Add mean line
+        mean_force = t["mean_force_g"]
+        std_force = t["std_force_g"]
+        time_range = [trial_times[0], trial_times[-1]]
+        ax.axhline(y=mean_force, color="red", linestyle="--", linewidth=2, label=f"Mean: {mean_force:.4f} g")
+        
+        # Add standard deviation band
+        ax.fill_between(time_range, mean_force - std_force, mean_force + std_force, 
+                        alpha=0.2, color="red", label=f"Std Dev: ±{std_force:.4f} g")
+        
         ax.set_xlabel("time [s]")
         ax.set_ylabel("F_out [g]")
         ax.set_title(f"Trial {t['trial']:02d}: {trial_label}")
         ax.grid(True, linestyle="--", alpha=0.5)
+        ax.legend(loc="upper left")
 
-        if plot_text:
-            fig.text(0.99, 0.01, plot_text,
-                     ha="right", va="bottom", fontsize=7, color="gray")
+        # Notes (bottom left)
+        plot_notes_text = f"Notes: {notes}\n"
+        
+        # Variables (bottom right)
+        plot_variables = [
+            f"independent_variable = {metadata['independent_variable']} [{metadata.get('independent_unit','')}]",
+            f"F_in = {metadata.get('F_in','')} [{metadata.get('F_in_unit','')}]",
+            f"l_offset = {metadata.get('l_offset','')}",
+            f"n_units = {metadata.get('n_units','')}",
+            f"l_curve = {metadata.get('l_curve','')}",
+            f"capture_duration = {CAPTURE_DURATION_S}s"
+        ]
+        plot_variables_text = "\n".join(x for x in plot_variables if x and x != " []")
 
-        plt.tight_layout()
+        # Display notes on bottom left with better contrast
+        if notes or True:
+            fig.text(0.01, 0.01, plot_notes_text,
+                     ha="left", va="bottom", fontsize=9, color="darkgray")
+        
+        # Display variables on bottom right
+        if plot_variables_text:
+            fig.text(0.99, 0.01, plot_variables_text,
+                     ha="right", va="bottom", fontsize=9, color="darkgray")
+
+        plt.tight_layout(rect=[0, 0.15, 1, 1])
         trial_path = os.path.join(output_dir, f"plot_trial_{t['trial']:02d}.png")
         plt.savefig(trial_path, dpi=150)
         plt.show()
