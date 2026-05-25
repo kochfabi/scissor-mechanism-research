@@ -38,6 +38,9 @@ def run_calibration(sensor: Sensor):
 
 def get_experiment_metadata() -> dict:
     print("=== EXPERIMENT SETUP ===")
+    title = input("  Experiment title (Enter to skip): ").strip()
+    notes = input("  Notes (Enter to skip): ").strip()
+    
     variable_map = {
         "f_in": "F_in",
         "l_offset": "l_offset",
@@ -61,11 +64,10 @@ def get_experiment_metadata() -> dict:
     else:
         F_in = input("  F_in (input force): ").strip()
         F_in_unit = input("  Unit for F_in: ").strip()
-
+        
     l_offset = "" if independent_variable == "l_offset" else input("  l_offset (opening angle offset length): ").strip()
     n_units = "" if independent_variable == "n_units" else input("  n_units (number of units): ").strip()
     l_curve = "" if independent_variable == "l_curve" else input("  l_curve (curvilinear offset length): ").strip()
-    notes = input("  Notes (Enter to skip): ").strip()
 
     return {
         "independent_variable": independent_variable,
@@ -76,6 +78,7 @@ def get_experiment_metadata() -> dict:
         "n_units": n_units,
         "l_curve": l_curve,
         "notes": notes,
+        "title": title,
     }
 
 

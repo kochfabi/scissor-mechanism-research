@@ -21,20 +21,22 @@ def compute_stats(readings: list) -> dict:
 
 def save_results(trials: list, metadata: dict) -> str:
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    exp_dir   = os.path.join(OUTPUT_DIR, timestamp)
+    title = metadata.get("title", "Untitled")
+    exp_dir   = os.path.join(OUTPUT_DIR, timestamp + "_" + title)
     os.makedirs(exp_dir, exist_ok=True)
     variable  = metadata["independent_variable"]
 
     #  ── Summary table ─────────────────────────────────────────────────
     with open(os.path.join(exp_dir, "summary.csv"), "w", newline="") as f:
         w = csv.writer(f)
+        w.writerow(["# title", metadata.get("title", "")])
+        w.writerow(["# notes", metadata.get("notes", "")])
         w.writerow(["# independent_variable", variable + (f" [{metadata['independent_unit']}]" if metadata.get("independent_unit") else "")])
         F_in_unit = metadata.get("F_in_unit", "")
         w.writerow(["# F_in", metadata["F_in"] + (f" {F_in_unit}" if F_in_unit else "")])
         w.writerow(["# l_offset", metadata["l_offset"]])
         w.writerow(["# n_units", metadata["n_units"]])
         w.writerow(["# l_curve", metadata["l_curve"]])
-        w.writerow(["# notes", metadata.get("notes", "")])
         # Summary uses mass-equivalent in grams for readability and reports efficiency.
         w.writerow(["trial", variable, "mean_force_g", "std_force_g", "epsilon", "n_samples"])
         for t in trials:
@@ -149,7 +151,7 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         
         # Add standard deviation band
         ax.fill_between(time_range, mean_force - std_force, mean_force + std_force, 
-                        alpha=0.2, color="red", label=f"Std Dev: ±{std_force:.4f} g")
+                        alpha=0.1, color="red", label=f"Std Dev: ±{std_force:.4f} g")
         
         ax.set_xlabel("time [s]")
         ax.set_ylabel("F_out [g]")
