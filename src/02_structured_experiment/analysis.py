@@ -87,13 +87,13 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
     ax.grid(True, linestyle="--", alpha=0.5)
 
     #  ── Efficiency Plot ─────────────────────────────────────────────────
-    lines = [error_line[0]]
-    labels = [error_line[0].get_label()]
+    lines = [error_line.lines[0]]
+    labels = ["F_out [g] ± std"]
     if has_epsilon:
         ax2 = ax.twinx()
         eps_plot = [100 * e if e is not None else np.nan for e in epsilons]
         eps_line, = ax2.plot(x, eps_plot, color="tab:blue", marker="s", linestyle="-", linewidth=1.5,
-                             label="Efficiency (ε %)")
+                             label="Efficiency ε (%)")
         ax2.set_ylabel("Efficiency ε (%)")
         ax2.grid(False)
         lines.append(eps_line)
