@@ -21,7 +21,7 @@ def compute_stats(readings: list) -> dict:
 
 def save_results(trials: list, metadata: dict) -> str:
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    title = metadata.get("title", "Untitled")
+    title = metadata.get("title")
     exp_dir   = os.path.join(OUTPUT_DIR, timestamp + "_" + title)
     os.makedirs(exp_dir, exist_ok=True)
     variable  = metadata["independent_variable"]

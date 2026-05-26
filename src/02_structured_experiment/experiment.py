@@ -27,18 +27,17 @@ def run_calibration(sensor: Sensor):
     sensor.send(weight_g)
     wait_for("SCALE")
 
-    while True:
-        line = sensor.readline()
-        if line == "READY":
-            print("  Sensor ready.\n")
-            break
-
+    # Tare after mounting to mechanism
+    show_live_until_enter(sensor, "Mount sensor, then press Enter to tare...")
+    sensor.send("")  # sends '\n' — triggers Arduino tare
+    wait_for("READY")
 
 # ── Experiment setup ─────────────────────────────────────────────────────────
 
 def get_experiment_metadata() -> dict:
     print("=== EXPERIMENT SETUP ===")
     title = input("  Experiment title (Enter to skip): ").strip()
+    title = title if title != "" else "Untitled"
     notes = input("  Notes (Enter to skip): ").strip()
     
     variable_map = {
@@ -105,9 +104,9 @@ def compute_efficiency(input_value: float, input_unit: str, stats: dict):
 
 # ── Live display ─────────────────────────────────────────────────────────────
 
-def show_live_until_enter(sensor: Sensor):
+def show_live_until_enter(sensor: Sensor, prompt: str = "Live readings (press Enter when force is stable):"):
     """Stream live readings to terminal. Returns when user presses Enter."""
-    print("  Live readings (press Enter when force is stable):")
+    print(f"  {prompt}")
 
     stop = threading.Event()
 

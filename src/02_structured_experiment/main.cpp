@@ -15,10 +15,17 @@ void setup() {
     while (!Serial);
     sensor.begin(DATA_PIN, CLOCK_PIN);
     calibrate();
-    Serial.println("READY");
 }
 
 void loop() {
+    if (Serial.available()) {
+        char c = Serial.read();
+        if (c == '\n') {
+            sensor.tare(100);
+            Serial.println("READY");
+        }
+    }
+
     float force_N  = sensor.get_units(5);
     float weight_g = force_N * 1000.0f / GRAVITY;
 
