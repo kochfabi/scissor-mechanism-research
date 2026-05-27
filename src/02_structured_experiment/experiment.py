@@ -104,26 +104,145 @@ def compute_efficiency(input_value: float, input_unit: str, stats: dict):
 
 # ── Live display ─────────────────────────────────────────────────────────────
 
-def show_live_until_enter(sensor: Sensor, prompt: str = "Live readings (press Enter when force is stable):"):
-    """Stream live readings to terminal. Returns when user presses Enter."""
+def show_live_until_enter(
+    sensor: Sensor,
+    prompt: str = "Live readings (press Enter when force is stable):"
+):
+    """Stream live readings to a live plot.
+    Auto-continues when std dev < 0.3 g for last 50 samples
+    after a minimum wait time of 15 s.
+    """
+
     print(f"  {prompt}")
 
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from collections import deque
+
+    window_size = 50
+    stability_threshold = 0.3  # g
+    minimum_wait_s = 15
+
+    timestamps = deque(maxlen=window_size)
+    weights = deque(maxlen=window_size)
+
     stop = threading.Event()
+    enter_pressed = threading.Event()
+
+    start_time = time.time()
+
+    def input_thread():
+        input()
+        enter_pressed.set()
 
     def read_loop():
         while not stop.is_set():
             line = sensor.readline()
             parsed = sensor.parse(line)
+
             if parsed:
                 _, _, w = parsed
-                print(f"    {w:+.4f} g", end="\r")
+                timestamps.append(time.time() - start_time)
+                weights.append(w)
+            else:
+                time.sleep(0.01)
 
-    thread = threading.Thread(target=read_loop, daemon=True)
-    thread.start()
-    input()          # blocks until Enter
-    stop.set()
-    thread.join(timeout=1)
-    print()          # newline after the \r output
+    input_t = threading.Thread(target=input_thread, daemon=True)
+    input_t.start()
+
+    read_t = threading.Thread(target=read_loop, daemon=True)
+    read_t.start()
+
+    plt.ion()
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    line_plot, = ax.plot(
+        [],
+        [],
+        color="steelblue",
+        marker="o",
+        markersize=4,
+        linestyle="-",
+        linewidth=1,
+        label="Weight (g)"
+    )
+
+    avg_line = ax.axhline(
+        0,
+        linestyle="--",
+        linewidth=1,
+        label="Average"
+    )
+
+    stats_text = ax.text(
+        0.02,
+        0.15,
+        "",
+        transform=ax.transAxes,
+        verticalalignment="top",
+        fontsize=11,
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+    )
+
+    ax.set_title(prompt)
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Weight (g)")
+    ax.grid(True)
+    ax.legend(loc="upper left")
+
+    try:
+        while not enter_pressed.is_set():
+
+            if weights:
+
+                weights_np = np.array(weights)
+
+                current_value = weights_np[-1]
+                mean_value = np.mean(weights_np)
+                std_value = np.std(weights_np)
+
+                line_plot.set_data(timestamps, weights)
+                avg_line.set_ydata([mean_value, mean_value])
+
+                stats_text.set_text(
+                    f"Current: {current_value:+.3f} g\n"
+                    f"Average: {mean_value:+.3f} g\n"
+                    f"Std Dev: {std_value:.3f} g\n"
+                    f"Samples: {len(weights_np)}"
+                )
+
+                ax.relim()
+                ax.autoscale_view()
+
+                if len(timestamps) > 1:
+                    ax.set_xlim(timestamps[0], timestamps[-1])
+
+                fig.canvas.draw()
+                fig.canvas.flush_events()
+
+                elapsed = time.time() - start_time
+
+                if (
+                    elapsed >= minimum_wait_s
+                    and len(weights_np) >= window_size
+                    and std_value < stability_threshold
+                ):
+                    enter_pressed.set()
+
+            plt.pause(0.05)
+
+    except Exception:
+        pass
+
+    finally:
+        stop.set()
+        read_t.join(timeout=1)
+
+        plt.ioff()
+        plt.close(fig)
+
+        print()
 
 
 # ── Capture ───────────────────────────────────────────────────────────────────
