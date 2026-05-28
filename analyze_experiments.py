@@ -315,7 +315,7 @@ def plot_epsilon(all_metrics: list[dict], output_dir: str):
     ax.set_title("Efficiency vs. Input Force — all configurations", fontsize=13)
     ax.legend(fontsize=9, loc="lower right")
     ax.grid(True, linestyle="--", alpha=0.4)
-    ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0.7)
 
     plt.tight_layout()
     out = os.path.join(output_dir, "plot_epsilon.png")

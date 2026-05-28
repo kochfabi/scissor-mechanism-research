@@ -142,11 +142,11 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
     )
 
     # Notes display
-    fig.text(0.01, 0.01, plot_notes_text, ha="left", va="bottom", fontsize=9, color="darkgray")
+    fig.text(0.01, 0.01, plot_notes_text, ha="left", va="bottom", fontsize=9, color="black")
     
     # Variables display
     if plot_variables_text:
-        fig.text(0.99, 0.01, plot_variables_text, ha="right", va="bottom", fontsize=9, color="darkgray")
+        fig.text(0.99, 0.01, plot_variables_text, ha="right", va="bottom", fontsize=9, color="black")
 
     # ── Layout + save ────────────────────────────────────────────────
     plt.tight_layout(rect=[0, 0.15, 1, 1])

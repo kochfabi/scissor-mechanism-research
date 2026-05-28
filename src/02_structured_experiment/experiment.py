@@ -177,7 +177,7 @@ def show_live_until_enter(
 
     stats_text = ax.text(
         0.02,
-        0.15,
+        0.20,
         "",
         transform=ax.transAxes,
         verticalalignment="top",
