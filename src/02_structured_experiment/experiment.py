@@ -172,7 +172,7 @@ def show_live_until_enter(
         0,
         linestyle="--",
         linewidth=1,
-        label="Average"
+        label="Mean"
     )
 
     stats_text = ax.text(
@@ -207,7 +207,7 @@ def show_live_until_enter(
 
                 stats_text.set_text(
                     f"Current: {current_value:+.3f} g\n"
-                    f"Average: {mean_value:+.3f} g\n"
+                    f"Mean: {mean_value:+.3f} g\n"
                     f"Std Dev: {std_value:.3f} g\n"
                     f"Samples: {len(weights_np)}"
                 )
