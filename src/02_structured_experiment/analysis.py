@@ -8,6 +8,7 @@ from config import OUTPUT_DIR, CAPTURE_DURATION_S
 
 def compute_stats(readings: list) -> dict:
     # readings: (time_s, force_N, weight_g)
+    times = [r[0] for r in readings]
     forces_N = [r[1] for r in readings]
     forces_g = [r[2] for r in readings]
     return {
@@ -16,6 +17,8 @@ def compute_stats(readings: list) -> dict:
         "mean_force_N": float(np.mean(forces_N)),
         "std_force_N":  float(np.std(forces_N, ddof=1)),
         "n":            len(forces_g),
+        "drift_slope": float(np.polyfit(times, forces_g, 1)[0]),
+        "drift_r": float(np.corrcoef(times, forces_g)[0, 1])
     }
 
 
@@ -38,11 +41,11 @@ def save_results(trials: list, metadata: dict) -> str:
         w.writerow(["# n_units", metadata["n_units"]])
         w.writerow(["# l_curve", metadata["l_curve"]])
         # Summary uses mass-equivalent in grams for readability and reports efficiency.
-        w.writerow(["trial", variable, "mean_force_g", "std_force_g", "epsilon", "n_samples"])
+        w.writerow(["trial", variable, "mean_force_g", "std_force_g", "epsilon", "n_samples", "drift_slope_g_s"])
         for t in trials:
             epsilon = t.get("epsilon")
             w.writerow([t["trial"], t[variable], t["mean_force_g"], t["std_force_g"],
-                        epsilon if epsilon is not None else "", t["n_samples"]])
+                        epsilon if epsilon is not None else "", t["n_samples"], t["drift_slope"]])
 
     #  ── Raw data per trial ─────────────────────────────────────────────────
     for t in trials:
@@ -77,7 +80,7 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
 
     fig, ax = plt.subplots(figsize=(8, 7))
     # ── Force output plot ────────────────────────────────────────────
-    ax.errorbar(x, means, yerr=stds, fmt="o-", color="black", ecolor="gray", elinewidth=1.5, capsize=5, label="F_out [g] ± std")
+    ax.errorbar(x, means, yerr=stds, fmt="o-", color="black", markersize=4, linewidth=1, ecolor="gray", elinewidth=1.5, capsize=5, label="F_out [g] ± std")
 
     # ── Ideal line ───────────────────────────────────────────────────
     ax.plot(x, x, "--", color="red", label="ideal (F_out = F_in)")

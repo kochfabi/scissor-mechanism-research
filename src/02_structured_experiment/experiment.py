@@ -308,6 +308,7 @@ def main():
             "epsilon":       epsilon,
             "n_samples":     stats["n"],
             "raw":           readings,
+            "drift_slope":   stats["drift_slope"]
         })
         trial_n += 1
 
