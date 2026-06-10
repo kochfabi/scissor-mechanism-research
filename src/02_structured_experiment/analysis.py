@@ -208,5 +208,4 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         plt.tight_layout(rect=[0, 0.15, 1, 1])
         trial_path = os.path.join(output_dir, f"plot_trial_{t['trial']:02d}.png")
         plt.savefig(trial_path, dpi=600)
-        plt.show()
         print(f"Trial plot saved → {trial_path}")
