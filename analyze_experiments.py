@@ -200,7 +200,7 @@ def compute_metrics(dataset: dict) -> dict:
             delta = unloading[fin]["mean_force_g"] - loading[fin]["mean_force_g"]
             hysteresis[fin] = {
                 "delta_F_g": delta,
-                "H_pct":     delta / fin * 100.0 if fin != 0 else None,
+                "H_pct":     delta / fin if fin != 0 else None,
             }
 
     mean_eps_load   = float(np.mean([v["epsilon"] for v in loading.values()   if v["epsilon"] is not None])) if loading   else None
@@ -283,87 +283,146 @@ def _colors(n: int):
 
 
 def plot_epsilon(all_metrics: list[dict], output_dir: str):
-    fig, ax = plt.subplots(figsize=(10, 6))
     colors = _colors(len(all_metrics))
 
+    # Efficiency figure
+    fig_eff, ax_eff = plt.subplots(figsize=(10, 6))
     for m, color in zip(all_metrics, colors):
         label = m["label"]
-
-        # Loading
         fins_l = sorted(m["loading"].keys())
-        eps_l  = [m["loading"][f]["epsilon"] for f in fins_l if m["loading"][f]["epsilon"] is not None]
+        eps_l = [m["loading"][f]["epsilon"] for f in fins_l if m["loading"][f]["epsilon"] is not None]
         fins_l = [f for f in fins_l if m["loading"][f]["epsilon"] is not None]
         if fins_l:
-            ax.plot(fins_l, eps_l, marker="o", markersize=5, linestyle="-",
-                    color=color, linewidth=1.5, label=f"{label} [load]")
+            ax_eff.plot(fins_l, eps_l, marker="o", markersize=4, linestyle="-",
+                        color=color, linewidth=1.2, label=f"{label} [load]")
+            for i in range(len(fins_l) - 1):
+                mid_fin = (fins_l[i] + fins_l[i+1]) / 2
+                mid_eps = (eps_l[i] + eps_l[i+1]) / 2
+                dx = (fins_l[i+1] - fins_l[i]) * 0.01
+                dy = (eps_l[i+1] - eps_l[i]) * 0.01
+                ax_eff.annotate("", xy=(mid_fin + dx, mid_eps + dy), xytext=(mid_fin - dx, mid_eps - dy),
+                                arrowprops=dict(arrowstyle="-|>", color=color, lw=1, alpha=0.8))
 
-        # Unloading (dashed)
         fins_u = sorted(m["unloading"].keys())
-        eps_u  = [m["unloading"][f]["epsilon"] for f in fins_u if m["unloading"][f]["epsilon"] is not None]
+        eps_u = [m["unloading"][f]["epsilon"] for f in fins_u if m["unloading"][f]["epsilon"] is not None]
         fins_u = [f for f in fins_u if m["unloading"][f]["epsilon"] is not None]
         if fins_u:
-            ax.plot(fins_u, eps_u, marker="s", markersize=5, linestyle="--",
-                    color=color, linewidth=1.5, alpha=0.8, label=f"{label} [unload]")
+            ax_eff.plot(fins_u, eps_u, marker="s", markersize=4, linestyle="--",
+                        color=color, linewidth=1.2, label=f"{label} [unload]")
+            for i in range(len(fins_u) - 1):
+                mid_fin = (fins_u[i] + fins_u[i+1]) / 2
+                mid_eps = (eps_u[i] + eps_u[i+1]) / 2
+                dx = (fins_u[i+1] - fins_u[i]) * 0.01
+                dy = (eps_u[i+1] - eps_u[i]) * 0.01
+                ax_eff.annotate("", xy=(mid_fin - dx, mid_eps - dy), xytext=(mid_fin + dx, mid_eps + dy),
+                                arrowprops=dict(arrowstyle="-|>", color=color, lw=1, alpha=0.8))
 
-    # Ideal line
     all_fins_all = sorted({f for m in all_metrics for f in list(m["loading"].keys()) + list(m["unloading"].keys())})
     if all_fins_all:
-        ax.axhline(1.0, color="red", linestyle=":", linewidth=1.2, label="Ideal (ε = 1)")
+        ax_eff.axhline(1.0, color="red", linestyle=":", linewidth=1.2, label="Ideal (ε = 1)")
 
-    ax.set_xlabel("F_in (g)", fontsize=12)
-    ax.set_ylabel("Mechanical efficiency ε = F_out / F_in", fontsize=12)
-    ax.set_title("Efficiency vs. Input Force — all configurations", fontsize=13)
-    ax.legend(fontsize=9, loc="lower right")
-    ax.grid(True, linestyle="--", alpha=0.4)
-    ax.set_ylim(bottom=0.7)
+    ax_eff.set_xlabel("F_in [g]", fontsize=12)
+    ax_eff.set_ylabel("ε = F_out / F_in", fontsize=12)
+    ax_eff.set_title("Force Transmission Efficiency", fontsize=13)
+    ax_eff.grid(True, linestyle="--", alpha=0.4)
+    ax_eff.set_ylim(bottom=0.7)
+    ax_eff.legend(fontsize=8, framealpha=0.6)
 
+    out_eff = os.path.join(output_dir, "plot_epsilon_efficiency.png")
     plt.tight_layout()
-    out = os.path.join(output_dir, "plot_epsilon.png")
-    plt.savefig(out, dpi=150)
-    plt.close(fig)
-    print(f"  Saved → {out}")
+    plt.savefig(out_eff, dpi=150, bbox_inches="tight")
+    plt.close(fig_eff)
+    print(f"  Saved → {out_eff}")
+
+    # Force difference figure (F_out − F_in)
+    fig_fd, ax_fd = plt.subplots(figsize=(10, 6))
+    for m, color in zip(all_metrics, colors):
+        label = m["label"]
+        fins_l = sorted(m["loading"].keys())
+        fins_l = [f for f in fins_l if m["loading"][f]["epsilon"] is not None]
+        if fins_l:
+            diff_l = [m["loading"][f]["mean_force_g"] - f for f in fins_l]
+            ax_fd.plot(fins_l, diff_l, marker="o", markersize=4, linestyle="-",
+                       color=color, linewidth=1.2, label=f"{label} [load]")
+            for i in range(len(fins_l) - 1):
+                mid_fin = (fins_l[i] + fins_l[i+1]) / 2
+                mid_diff = (diff_l[i] + diff_l[i+1]) / 2
+                dx = (fins_l[i+1] - fins_l[i]) * 0.01
+                dy = (diff_l[i+1] - diff_l[i]) * 0.01
+                ax_fd.annotate("", xy=(mid_fin + dx, mid_diff + dy), xytext=(mid_fin - dx, mid_diff - dy),
+                               arrowprops=dict(arrowstyle="-|>", color=color, lw=1.2, alpha=0.8))
+
+        fins_u = sorted(m["unloading"].keys())
+        fins_u = [f for f in fins_u if m["unloading"][f]["epsilon"] is not None]
+        if fins_u:
+            diff_u = [m["unloading"][f]["mean_force_g"] - f for f in fins_u]
+            ax_fd.plot(fins_u, diff_u, marker="s", markersize=4, linestyle="--",
+                       color=color, linewidth=1.2, label=f"{label} [unload]")
+            for i in range(len(fins_u) - 1):
+                mid_fin = (fins_u[i] + fins_u[i+1]) / 2
+                mid_diff = (diff_u[i] + diff_u[i+1]) / 2
+                dx = (fins_u[i+1] - fins_u[i]) * 0.01
+                dy = (diff_u[i+1] - diff_u[i]) * 0.01
+                ax_fd.annotate("", xy=(mid_fin - dx, mid_diff - dy), xytext=(mid_fin + dx, mid_diff + dy),
+                               arrowprops=dict(arrowstyle="-|>", color=color, lw=1.0, alpha=0.5))
+
+    ax_fd.axhline(0.0, color="red", linestyle=":", linewidth=1.0, label="Ideal (F_out = F_in)")
+    ax_fd.set_xlabel("F_in [g]", fontsize=12)
+    ax_fd.set_ylabel("F_out − F_in [g]", fontsize=12)
+    ax_fd.set_title("Force Difference", fontsize=13)
+    ax_fd.grid(True, linestyle="--", alpha=0.4)
+    ax_fd.legend(fontsize=8, framealpha=0.6)
+    out_fd = os.path.join(output_dir, "plot_force_difference.png")
+    plt.tight_layout()
+    plt.savefig(out_fd, dpi=150, bbox_inches="tight")
+    plt.close(fig_fd)
+    print(f"  Saved → {out_fd}")
 
 
 def plot_hysteresis(all_metrics: list[dict], output_dir: str):
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     colors = _colors(len(all_metrics))
 
+    # Absolute ΔF plot
+    fig_a, ax_a = plt.subplots(figsize=(10, 6))
     for m, color in zip(all_metrics, colors):
         label = m["label"]
         fins = sorted(m["hysteresis"].keys())
-
-        # Absolute ΔF
+        if not fins:
+            continue
         delta_F = [m["hysteresis"][f]["delta_F_g"] for f in fins]
-        axes[0].plot(fins, delta_F, marker="o", markersize=5, linestyle="-",
-                     color=color, linewidth=1.5, label=label)
-
-        # Percentage H%
-        H_pct = [m["hysteresis"][f]["H_pct"] for f in fins if m["hysteresis"][f]["H_pct"] is not None]
-        fins_h = [f for f in fins if m["hysteresis"][f]["H_pct"] is not None]
-        if fins_h:
-            axes[1].plot(fins_h, H_pct, marker="o", markersize=5, linestyle="-",
-                         color=color, linewidth=1.5, label=label)
-
-    axes[0].axhline(0, color="gray", linestyle=":", linewidth=1)
-    axes[0].set_xlabel("F_in (g)", fontsize=12)
-    axes[0].set_ylabel("ΔF = F_out(unload) − F_out(load)  [g]", fontsize=11)
-    axes[0].set_title("Absolute Hysteresis", fontsize=12)
-    axes[0].legend(fontsize=9)
-    axes[0].grid(True, linestyle="--", alpha=0.4)
-
-    axes[1].axhline(0, color="gray", linestyle=":", linewidth=1)
-    axes[1].set_xlabel("F_in (g)", fontsize=12)
-    axes[1].set_ylabel("H (%) = ΔF / F_in × 100", fontsize=11)
-    axes[1].set_title("Normalised Hysteresis Ratio", fontsize=12)
-    axes[1].legend(fontsize=9)
-    axes[1].grid(True, linestyle="--", alpha=0.4)
-
-    plt.suptitle("Hysteresis — all configurations", fontsize=13, y=1.01)
+        ax_a.plot(fins, delta_F, marker="o", markersize=5, linestyle="-", color=color, linewidth=1.5, label=label)
+    ax_a.axhline(0, color="gray", linestyle=":", linewidth=1)
+    ax_a.set_xlabel("F_in [g]", fontsize=12)
+    ax_a.set_ylabel("ΔF = F_out(unload) − F_out(load)  [g]", fontsize=11)
+    ax_a.set_title("Absolute Hysteresis", fontsize=12)
+    ax_a.legend(fontsize=9)
+    ax_a.grid(True, linestyle="--", alpha=0.4)
+    out_a = os.path.join(output_dir, "plot_hysteresis_absolute.png")
     plt.tight_layout()
-    out = os.path.join(output_dir, "plot_hysteresis.png")
-    plt.savefig(out, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  Saved → {out}")
+    plt.savefig(out_a, dpi=150, bbox_inches="tight")
+    plt.close(fig_a)
+    print(f"  Saved → {out_a}")
+
+    # Normalised hysteresis ratio H = ΔF / F_in (not percent)
+    fig_r, ax_r = plt.subplots(figsize=(10, 6))
+    for m, color in zip(all_metrics, colors):
+        label = m["label"]
+        fins = sorted(m["hysteresis"].keys())
+        fins_r = [f for f in fins if f != 0 and m["hysteresis"][f]["delta_F_g"] is not None]
+        if fins_r:
+            ratio = [m["hysteresis"][f]["delta_F_g"] / f for f in fins_r]
+            ax_r.plot(fins_r, ratio, marker="o", markersize=5, linestyle="-", color=color, linewidth=1.5, label=label)
+    ax_r.axhline(0, color="gray", linestyle=":", linewidth=1)
+    ax_r.set_xlabel("F_in [g]", fontsize=12)
+    ax_r.set_ylabel("H = ΔF / F_in", fontsize=11)
+    ax_r.set_title("Normalised Hysteresis Ratio", fontsize=12)
+    ax_r.legend(fontsize=9)
+    ax_r.grid(True, linestyle="--", alpha=0.4)
+    out_r = os.path.join(output_dir, "plot_hysteresis_ratio.png")
+    plt.tight_layout()
+    plt.savefig(out_r, dpi=150, bbox_inches="tight")
+    plt.close(fig_r)
+    print(f"  Saved → {out_r}")
 
 
 # ── 6. CSV export ─────────────────────────────────────────────────────────────
