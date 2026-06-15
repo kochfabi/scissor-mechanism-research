@@ -62,7 +62,7 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         output_dir = OUTPUT_DIR
     os.makedirs(output_dir, exist_ok=True)
 
-    # ── Summary Plot ─────────────────────────────────────────────────
+    # ── Statistics ─────────────────────────────────────────────────
     variable = metadata["independent_variable"]
     unit     = metadata.get("independent_unit", "")
     x_labels = [t[variable] for t in trials]
@@ -78,11 +78,11 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         x = list(range(len(trials)))
         numeric = False
 
-    fig, ax = plt.subplots(figsize=(8, 7))
-    # ── Force output plot ────────────────────────────────────────────
-    ax.errorbar(x, means, yerr=stds, fmt="o-", color="black", markersize=4, linewidth=1, ecolor="gray", elinewidth=1.5, capsize=5, label="F_out [g] ± std")
 
-    # ── Ideal line ───────────────────────────────────────────────────
+    # ── Force output plot ────────────────────────────────────────────
+    fig, ax = plt.subplots(figsize=(8, 7))
+    ax.errorbar(x, means, yerr=stds, fmt="o-", color="black", markersize=4, linewidth=1, ecolor="gray", elinewidth=1.5, capsize=5, label="F_out [g] ± std")
+    # ideal line
     ax.plot(x, x, "--", color="red", label="ideal (F_out = F_in)")
 
     ax.set_xlabel(f"{variable} [{unit}]" if unit else variable)
@@ -93,38 +93,14 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         ax.set_xticklabels(x_labels)
     ax.grid(True, linestyle="--", alpha=0.5)
 
-    # ── Efficiency plot ──────────────────────────────────────────────
-    if has_epsilon:
-        ax2 = ax.twinx()
-        eps_plot = [
-            100 * e if e is not None else np.nan
-            for e in epsilons
-        ]
-        ax2.plot( x, eps_plot, color="tab:blue", marker="s", linestyle="-", linewidth=1.5, label="Efficiency ε (%)"
-        )
-
-        ax2.set_ylabel("Efficiency ε (%)")
-        ax2.grid(False)
-
-    # ── Combined legend from both axes ───────────────────────────────
-
+    # Combined legend from both axes
     handles1, labels1 = ax.get_legend_handles_labels()
-    if has_epsilon:
-        handles2, labels2 = ax2.get_legend_handles_labels()
-    else:
-        handles2, labels2 = [], []
-    ax.legend(
-        handles1 + handles2,
-        labels1 + labels2,
-        loc="upper left"
-    )
-
-    # ── Bottom annotations ───────────────────────────────────────────
-
-    notes = metadata.get("notes", "")
+    ax.legend(handles1, labels1, loc="upper left")
 
     # Notes (bottom left)
+    notes = metadata.get("notes", "")
     plot_notes_text = f"Notes: {notes}\n"
+    fig.text(0.01, 0.01, plot_notes_text, ha="left", va="bottom", fontsize=9, color="black")
 
     # Variables (bottom right)
     plot_variables = [
@@ -135,25 +111,46 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         f"l_curve = {metadata.get('l_curve','')}",
         f"capture_duration = {CAPTURE_DURATION_S}s"
     ]
-
     plot_variables_text = "\n".join(
         x for x in plot_variables
         if x and x != " []"
     )
-
-    # Notes display
-    fig.text(0.01, 0.01, plot_notes_text, ha="left", va="bottom", fontsize=9, color="black")
-    
-    # Variables display
     if plot_variables_text:
         fig.text(0.99, 0.01, plot_variables_text, ha="right", va="bottom", fontsize=9, color="black")
 
-    # ── Layout + save ────────────────────────────────────────────────
+    # Layout + save
     plt.tight_layout(rect=[0, 0.15, 1, 1])
-    summary_path = os.path.join(output_dir, "plot.png")
+    summary_path = os.path.join(output_dir, "plot_F_out.png")
     plt.savefig(summary_path, dpi=150)
     plt.show()
     print(f"Plot saved  → {summary_path}")
+
+
+    # ── Efficiency Plot ────────────────────────────────────────────
+    if has_epsilon:
+        fig_e, ax_e = plt.subplots(figsize=(8, 7))
+        eps_plot = [100 * e if e is not None else np.nan for e in epsilons]
+        ax_e.plot(x, eps_plot, color="tab:blue", marker="s", linestyle="-", linewidth=1.5, label="Efficiency ε (%)")
+        ax_e.plot(x, 1, "--", color="red", label="ideal (F_out = F_in)")
+        ax_e.set_xlabel(f"{variable} [{unit}]" if unit else variable)
+        ax_e.set_ylabel("Efficiency ε (%)")
+        ax_e.set_title(f"Efficiency vs {variable}")
+        if not numeric:
+            ax_e.set_xticks(x)
+            ax_e.set_xticklabels(x_labels)
+        ax_e.grid(True, linestyle="--", alpha=0.5)
+        ax_e.legend(loc="upper left")
+        
+        # Notes
+        fig_e.text(0.01, 0.01, plot_notes_text, ha="left", va="bottom", fontsize=9, color="black")
+        if plot_variables_text:
+            fig_e.text(0.99, 0.01, plot_variables_text, ha="right", va="bottom", fontsize=9, color="black")
+        
+        plt.tight_layout(rect=[0, 0.15, 1, 1])
+        eff_path = os.path.join(output_dir, "plot_efficiency.png")
+        plt.savefig(eff_path, dpi=150)
+        plt.show()
+        print(f"Efficiency plot saved → {eff_path}")
 
     #  ── Individual Trial Plots ─────────────────────────────────────────────────
     for t in trials:
