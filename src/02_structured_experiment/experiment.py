@@ -28,7 +28,8 @@ def run_calibration(sensor: Sensor):
     wait_for("SCALE")
 
     # Tare after mounting to mechanism
-    show_live_until_enter(sensor, "Mount sensor, then press Enter to tare...")
+    input("  Remove calibration weight, mount sensor, then press Enter...")
+    show_live_until_enter(sensor, "Press Enter to tare...")
     sensor.send("")  # sends '\n' — triggers Arduino tare
     wait_for("READY")
 

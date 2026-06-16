@@ -325,7 +325,7 @@ def plot_epsilon(all_metrics: list[dict], output_dir: str):
     ax_eff.set_ylabel("ε = F_out / F_in", fontsize=12)
     ax_eff.set_title("Force Transmission Efficiency", fontsize=13)
     ax_eff.grid(True, linestyle="--", alpha=0.4)
-    ax_eff.set_ylim(bottom=0.7)
+    ax_eff.set_ylim(bottom=min(0.7, min(m["mean_eps_load"] for m in all_metrics if m["mean_eps_load"] is not None)) * 0.9)
     ax_eff.legend(fontsize=8, framealpha=0.6)
 
     out_eff = os.path.join(output_dir, "plot_epsilon_efficiency.png")

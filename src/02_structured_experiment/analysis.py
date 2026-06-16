@@ -83,7 +83,8 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
     fig, ax = plt.subplots(figsize=(8, 7))
     ax.errorbar(x, means, yerr=stds, fmt="o-", color="black", markersize=4, linewidth=1, ecolor="gray", elinewidth=1.5, capsize=5, label="F_out [g] ± std")
     # ideal line
-    ax.plot(x, x, "--", color="red", label="ideal (F_out = F_in)")
+    if variable == "F_in":
+        ax.plot(x, x, "--", color="red", label="ideal (F_out = F_in)")
 
     ax.set_xlabel(f"{variable} [{unit}]" if unit else variable)
     ax.set_ylabel("F_out [g]")
@@ -131,7 +132,7 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         fig_e, ax_e = plt.subplots(figsize=(8, 7))
         eps_plot = [100 * e if e is not None else np.nan for e in epsilons]
         ax_e.plot(x, eps_plot, color="tab:blue", marker="s", linestyle="-", linewidth=1.5, label="Efficiency ε (%)")
-        ax_e.plot(x, 1, "--", color="red", label="ideal (F_out = F_in)")
+        ax_e.axhline(y=100, color="red", linestyle="--", linewidth=2, label="ideal (F_out = F_in)")
         ax_e.set_xlabel(f"{variable} [{unit}]" if unit else variable)
         ax_e.set_ylabel("Efficiency ε (%)")
         ax_e.set_title(f"Efficiency vs {variable}")
