@@ -1,0 +1,11 @@
+# independent_variable,F_in,,,,,
+# independent_unit,g,,,,,
+# F_in,500,,,,,
+# F_in_unit,g,,,,,
+# l_offset,15,,,,,
+# n_units,3,,,,,
+# l_curve,0,,,,,
+# notes,,,,,,
+trial,F_in,mean_force_g,std_force_g,epsilon,epsilon_%,n_samples
+1,0,-6.221226087,0.398170058,,,46
+2,100,103.8053109,0.215168769,1.038053109,103.81,46

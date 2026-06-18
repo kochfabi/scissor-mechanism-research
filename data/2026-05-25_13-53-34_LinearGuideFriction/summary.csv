@@ -1,0 +1,9 @@
+# title,LInearGuideFriction
+# notes,Test without linear guide
+# independent_variable,F_in [g]
+# F_in, g
+# l_offset,20
+# n_units,1
+# l_curve,0
+trial,F_in,mean_force_g,std_force_g,epsilon,n_samples
+1,0,6.926591304347824,77.14983546641871,,46

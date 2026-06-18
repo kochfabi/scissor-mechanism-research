@@ -196,12 +196,12 @@ def plot_results(trials: list, metadata: dict, output_dir=None):
         # Display notes on bottom left with better contrast
         if notes or True:
             fig.text(0.01, 0.01, plot_notes_text,
-                     ha="left", va="bottom", fontsize=9, color="darkgray")
+                     ha="left", va="bottom", fontsize=9, color="black")
         
         # Display variables on bottom right
         if plot_variables_text:
             fig.text(0.99, 0.01, plot_variables_text,
-                     ha="right", va="bottom", fontsize=9, color="darkgray")
+                     ha="right", va="bottom", fontsize=9, color="black")
 
         plt.tight_layout(rect=[0, 0.15, 1, 1])
         trial_path = os.path.join(output_dir, f"plot_trial_{t['trial']:02d}.png")

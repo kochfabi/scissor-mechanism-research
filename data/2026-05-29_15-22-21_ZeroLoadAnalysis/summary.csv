@@ -1,0 +1,11 @@
+# title,ZeroLoadAnalysis
+# notes,
+# independent_variable,F_in [g]
+# F_in, g
+# l_offset,0
+# n_units,1
+# l_curve,0
+trial,F_in,mean_force_g,std_force_g,epsilon,n_samples,drift_slope_g_s
+1,0,5.460635080058225,0.7729374475844619,,687,0.007045875991742937
+2,0,-17.84672878787879,64.47463927410998,,726,0.08933323568010212
+3,,-13.64869155749636,0.3478617583631976,,687,-0.0007552580375476172

@@ -1,0 +1,9 @@
+# independent_variable,F_in [f]
+# F_in, f
+# l_offset,23
+# n_units,56
+# l_curve,2
+# notes,123
+trial,F_in,mean_force_g,std_force_g,epsilon,n_samples
+1,300,296.97602826086955,1.084452800604588,0.9899200942028985,46
+2,300,296.2800760869565,0.1587606642924186,0.9876002536231884,46

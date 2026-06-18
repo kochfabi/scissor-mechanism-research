@@ -1,0 +1,11 @@
+# title,LivePlotTest
+# notes,
+# independent_variable,F_in
+# F_in,
+# l_offset,
+# n_units,
+# l_curve,
+trial,F_in,mean_force_g,std_force_g,epsilon,n_samples
+1,100,99.70462,0.35911477093804145,0.9970462000000001,35
+2,200,214.6634971428571,0.2923154807493352,1.0733174857142855,35
+3,300,332.83999714285716,0.48268012394381876,1.109466657142857,35

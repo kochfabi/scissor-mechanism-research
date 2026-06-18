@@ -1,0 +1,16 @@
+# Per-condition metrics
+label,l_offset,n_units,l_curve,F_in_g,F_out_load_g,epsilon_load,F_out_unload_g,epsilon_unload,delta_F_g,H_pct
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,100.0,83.5898,0.835898,104.1116,1.041116,20.5218,20.522
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,200.0,184.1010,0.920505,204.3262,1.021631,20.2251,10.113
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,300.0,279.5997,0.931999,299.8828,0.999609,20.2831,6.761
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,400.0,374.2520,0.935630,395.3153,0.988288,21.0634,5.266
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,500.0,467.3780,0.934756,496.5190,0.993038,29.1410,5.828
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,600.0,565.1243,0.941874,594.6103,0.991017,29.4859,4.914
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,700.0,659.2221,0.941746,695.2686,0.993241,36.0465,5.150
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,800.0,758.9980,0.948748,783.2339,0.979042,24.2358,3.029
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,900.0,848.9393,0.943266,877.7389,0.975265,28.7996,3.200
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,1000.0,953.7242,0.953724,,,,
+
+# Summary per configuration
+label,l_offset,n_units,l_curve,mean_eps_load,mean_eps_unload,delta_eps,mean_delta_F_g,mean_zero_residual_g
+"DesignValidationTest | l_off=24, n=1, l_c=0",24,1,0,0.928815,0.998028,0.069213,25.5336,4.5361

@@ -1,0 +1,9 @@
+# independent_variable,F_in
+# independent_unit,g
+# F_in,100
+# F_in_unit,g
+# l_offset,0
+# n_units,3
+# l_curve,0
+# notes,
+trial,F_in,mean_force_g,std_force_g,epsilon,epsilon_%,n_samples

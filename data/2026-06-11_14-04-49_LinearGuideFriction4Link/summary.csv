@@ -1,0 +1,11 @@
+# title,LinearGuideFriction4Link
+# notes,
+# independent_variable,F_in [g]
+# F_in, g
+# l_offset,24
+# n_units,4
+# l_curve,0
+trial,F_in,mean_force_g,std_force_g,epsilon,n_samples,drift_slope_g_s
+1,0,14.511240579710147,0.38315185221851994,,69,-0.03142878544362459
+2,0,-80.3206608695652,353.6938532587133,,69,4.391335584114266
+3,0,90.67568985507246,156.0207526566052,,69,-1.6716230334442563
