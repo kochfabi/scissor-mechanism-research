@@ -1,3 +1,4 @@
+# Per-condition metrics,,,,,,,,,,
 label,l_offset,n_units,l_curve,F_in_g,F_out_load_g,epsilon_load,F_out_unload_g,epsilon_unload,delta_F_g,H_pct
 "LinkNumberVariationHysteresis | l_off=24, n=1, l_c=0",24,1,0,100,93.3045,0.933045,116.9963,1.169963,23.6918,0.237
 "LinkNumberVariationHysteresis | l_off=24, n=1, l_c=0",24,1,0,200,188.4221,0.942111,206.7124,1.033562,18.2902,0.091
@@ -14,3 +15,9 @@ label,l_offset,n_units,l_curve,F_in_g,F_out_load_g,epsilon_load,F_out_unload_g,e
 "LinkNumberVariationHysteresis | l_off=24, n=2, l_c=0",24,2,0,300,288.8031,0.962677,306.246,1.02082,17.4429,0.058
 "LinkNumberVariationHysteresis | l_off=24, n=2, l_c=0",24,2,0,400,378.2272,0.945568,398.4444,0.996111,20.2171,0.051
 "LinkNumberVariationHysteresis | l_off=24, n=2, l_c=0",24,2,0,500,471.803,0.943606,,,,
+,,,,,,,,,,
+# Summary per configuration,,,,,,,,,,
+label,l_offset,n_units,l_curve,mean_eps_load,mean_eps_unload,delta_eps,mean_delta_F_g,mean_zero_residual_g,,
+"LinkNumberVariationHysteresis | l_off=24, n=1, l_c=0",24,1,0,0.950662,1.055403,0.104741,18.1911,12.0606,,
+"LinkNumberVariationHysteresis | l_off=24, n=3, l_c=0",24,3,0,0.929404,1.088614,0.15921,31.9726,19.562,,
+"LinkNumberVariationHysteresis | l_off=24, n=2, l_c=0",24,2,0,0.941065,1.054445,0.11338,20.784,15.7543,,
