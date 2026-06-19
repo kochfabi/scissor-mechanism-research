@@ -12,6 +12,7 @@ parses each one, and produces:
   2. Efficiency (ε) vs F_in comparison plot  [plot_epsilon.png]
   3. Hysteresis (H%) vs F_in comparison plot [plot_hysteresis.png]
   4. Exported metrics CSV                     [metrics.csv]
+  5. Exported configuration summary CSV      [metrics_configuration.csv]
 
 All outputs are saved to <folder_path>/analysis/.
 """
@@ -321,27 +322,27 @@ def plot_epsilon(all_metrics: list[dict], output_dir: str):
     if all_fins_all:
         ax_eff.axhline(1.0, color="red", linestyle=":", linewidth=1.2, label="Ideal (ε = 1)")
 
-    ax_eff.set_xlabel("F_in [g]", fontsize=12)
-    ax_eff.set_ylabel("ε = F_out / F_in", fontsize=12)
-    ax_eff.set_title("Force Transmission Efficiency", fontsize=13)
+    ax_eff.set_xlabel(r"$F_{in}$ (g)", fontsize=12)
+    ax_eff.set_ylabel(r"$\epsilon = F_{out} / F_{in}$", fontsize=12)
+    ax_eff.set_title("Mechanical Efficiency", fontsize=13)
     ax_eff.grid(True, linestyle="--", alpha=0.4)
     ax_eff.set_ylim(bottom=min(0.7, min(m["mean_eps_load"] for m in all_metrics if m["mean_eps_load"] is not None)) * 0.9)
     ax_eff.legend(fontsize=8, framealpha=0.6)
 
-    out_eff = os.path.join(output_dir, "plot_epsilon_efficiency.png")
+    out_eff = os.path.join(output_dir, "plot_efficiency.png")
     plt.tight_layout()
     plt.savefig(out_eff, dpi=150, bbox_inches="tight")
     plt.close(fig_eff)
     print(f"  Saved → {out_eff}")
 
-    # Force difference figure (F_out − F_in)
+    # Force loss figure (F_in − F_out)
     fig_fd, ax_fd = plt.subplots(figsize=(10, 6))
     for m, color in zip(all_metrics, colors):
         label = m["label"]
         fins_l = sorted(m["loading"].keys())
         fins_l = [f for f in fins_l if m["loading"][f]["epsilon"] is not None]
         if fins_l:
-            diff_l = [m["loading"][f]["mean_force_g"] - f for f in fins_l]
+            diff_l = [f - m["loading"][f]["mean_force_g"] for f in fins_l]
             ax_fd.plot(fins_l, diff_l, marker="o", markersize=4, linestyle="-",
                        color=color, linewidth=1.2, label=f"{label} [load]")
             for i in range(len(fins_l) - 1):
@@ -355,7 +356,7 @@ def plot_epsilon(all_metrics: list[dict], output_dir: str):
         fins_u = sorted(m["unloading"].keys())
         fins_u = [f for f in fins_u if m["unloading"][f]["epsilon"] is not None]
         if fins_u:
-            diff_u = [m["unloading"][f]["mean_force_g"] - f for f in fins_u]
+            diff_u = [f - m["unloading"][f]["mean_force_g"] for f in fins_u]
             ax_fd.plot(fins_u, diff_u, marker="s", markersize=4, linestyle="--",
                        color=color, linewidth=1.2, label=f"{label} [unload]")
             for i in range(len(fins_u) - 1):
@@ -367,12 +368,13 @@ def plot_epsilon(all_metrics: list[dict], output_dir: str):
                                arrowprops=dict(arrowstyle="-|>", color=color, lw=1.0, alpha=0.5))
 
     ax_fd.axhline(0.0, color="red", linestyle=":", linewidth=1.0, label="Ideal (F_out = F_in)")
-    ax_fd.set_xlabel("F_in [g]", fontsize=12)
-    ax_fd.set_ylabel("F_out − F_in [g]", fontsize=12)
-    ax_fd.set_title("Force Difference", fontsize=13)
+    ax_fd.set_xlabel(r"$F_{in}$ (g)", fontsize=12)
+    ax_fd.set_ylabel(r"$F_{loss} = F_{in} - F_{out}$ (g)", fontsize=12)
+    ax_fd.yaxis.set_inverted(True)
+    ax_fd.set_title("Force Loss", fontsize=13)
     ax_fd.grid(True, linestyle="--", alpha=0.4)
     ax_fd.legend(fontsize=8, framealpha=0.6)
-    out_fd = os.path.join(output_dir, "plot_force_difference.png")
+    out_fd = os.path.join(output_dir, "plot_force_loss.png")
     plt.tight_layout()
     plt.savefig(out_fd, dpi=150, bbox_inches="tight")
     plt.close(fig_fd)
@@ -392,9 +394,9 @@ def plot_hysteresis(all_metrics: list[dict], output_dir: str):
         delta_F = [m["hysteresis"][f]["delta_F_g"] for f in fins]
         ax_a.plot(fins, delta_F, marker="o", markersize=5, linestyle="-", color=color, linewidth=1.5, label=label)
     ax_a.axhline(0, color="gray", linestyle=":", linewidth=1)
-    ax_a.set_xlabel("F_in [g]", fontsize=12)
-    ax_a.set_ylabel("ΔF = F_out(unload) − F_out(load)  [g]", fontsize=11)
-    ax_a.set_title("Absolute Hysteresis", fontsize=12)
+    ax_a.set_xlabel(r"$F_{in}$ (g)", fontsize=12)
+    ax_a.set_ylabel(r"$\Delta F = F_{out}^{(unload)} - F_{out}^{(load)}$ (g)", fontsize=11)
+    ax_a.set_title("Hysteresis Absolute", fontsize=12)
     ax_a.legend(fontsize=9)
     ax_a.grid(True, linestyle="--", alpha=0.4)
     out_a = os.path.join(output_dir, "plot_hysteresis_absolute.png")
@@ -413,12 +415,12 @@ def plot_hysteresis(all_metrics: list[dict], output_dir: str):
             ratio = [m["hysteresis"][f]["delta_F_g"] / f for f in fins_r]
             ax_r.plot(fins_r, ratio, marker="o", markersize=5, linestyle="-", color=color, linewidth=1.5, label=label)
     ax_r.axhline(0, color="gray", linestyle=":", linewidth=1)
-    ax_r.set_xlabel("F_in [g]", fontsize=12)
-    ax_r.set_ylabel("H = ΔF / F_in", fontsize=11)
-    ax_r.set_title("Normalised Hysteresis Ratio", fontsize=12)
+    ax_r.set_xlabel(r"$F_{in}$ (g)", fontsize=12)
+    ax_r.set_ylabel(r"$H = \Delta F / F_{in}$", fontsize=11)
+    ax_r.set_title("Hysteresis Normalized", fontsize=12)
     ax_r.legend(fontsize=9)
     ax_r.grid(True, linestyle="--", alpha=0.4)
-    out_r = os.path.join(output_dir, "plot_hysteresis_ratio.png")
+    out_r = os.path.join(output_dir, "plot_hysteresis_normalized.png")
     plt.tight_layout()
     plt.savefig(out_r, dpi=150, bbox_inches="tight")
     plt.close(fig_r)
@@ -428,12 +430,12 @@ def plot_hysteresis(all_metrics: list[dict], output_dir: str):
 # ── 6. CSV export ─────────────────────────────────────────────────────────────
 
 def export_metrics_csv(all_metrics: list[dict], output_dir: str):
-    out = os.path.join(output_dir, "metrics.csv")
-    with open(out, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+    detail_out = os.path.join(output_dir, "metrics.csv")
+    summary_out = os.path.join(output_dir, "metrics_configuration.csv")
 
-        # Per-F_in detail table
-        writer.writerow(["# Per-condition metrics"])
+    # Per-condition detail table
+    with open(detail_out, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
         writer.writerow([
             "label", "l_offset", "n_units", "l_curve",
             "F_in_g",
@@ -463,9 +465,9 @@ def export_metrics_csv(all_metrics: list[dict], output_dir: str):
                     f"{hy['H_pct']:.3f}"        if hy and hy["H_pct"] is not None else "",
                 ])
 
-        # Summary table
-        writer.writerow([])
-        writer.writerow(["# Summary per configuration"])
+    # Per-configuration summary table
+    with open(summary_out, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
         writer.writerow([
             "label", "l_offset", "n_units", "l_curve", "mean_eps_load", "mean_eps_unload", "delta_eps", "mean_delta_F_g", "mean_zero_residual_g",
         ])
@@ -483,7 +485,8 @@ def export_metrics_csv(all_metrics: list[dict], output_dir: str):
                 f"{m['mean_zero']:.4f}"       if m["mean_zero"] is not None else "",
             ])
 
-    print(f"  Saved → {out}")
+    print(f"  Saved → {detail_out}")
+    print(f"  Saved → {summary_out}")
 
 
 # ── 7. Main ───────────────────────────────────────────────────────────────────
