@@ -1,8 +1,0 @@
-# independent_variable,F_in [g]
-# F_in, g
-# l_offset,20
-# n_units,1
-# l_curve,0
-# notes,additional graphics test
-trial,F_in,mean_force_g,std_force_g,epsilon,n_samples
-1,0,-0.009884782608695651,0.05213481228674285,,46

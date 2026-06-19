@@ -1,9 +1,0 @@
-# title,TitleTest
-# notes,example notes
-# independent_variable,F_in [65]
-# F_in, 65
-# l_offset,2
-# n_units,7
-# l_curve,3
-trial,F_in,mean_force_g,std_force_g,epsilon,n_samples
-1,50,27.88113260869565,45.592487890982184,0.557622652173913,46
