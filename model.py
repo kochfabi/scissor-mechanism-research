@@ -10,6 +10,7 @@ from matplotlib.patches import FancyArrowPatch
 eta_init = 0.99
 F_guide_init = 8.5
 F_joint_init = 1.5
+F_tare_init = 0.0
 n_init = 2
 l_offset_init = 10.0  # representing geometry proxy for theta
 
@@ -17,10 +18,11 @@ l_offset_init = 10.0  # representing geometry proxy for theta
 F_in_space = np.linspace(50, 500, 200)
 n_space = np.arange(1, 5, 1)
 l_off_space = np.linspace(0, 24, 25)
+F_tare_space = np.linspace(0, 30, 5)
 
 # Path to the metrics CSV file used for overlaying experimental data points.
 # Change this file path to the desired data file.
-metrics_file = "data/Analysis/analysis/metrics.csv"
+metrics_file = "data/Analysis/2026-06-16_HighFrictionTest/metrics.csv"
 if os.path.exists(metrics_file):
     metrics_df = pd.read_csv(metrics_file)
 else:
@@ -36,7 +38,7 @@ gs_main = fig_main.add_gridspec(2, 1, height_ratios=[3, 0.4], hspace=0.3, left=0
 gs_plots = gs_main[0].subgridspec(2, 2, hspace=0.5, wspace=0.25)
 
 # Gridspec for sliders with tight spacing
-gs_sliders = gs_main[1].subgridspec(4, 1, hspace=0.02, wspace=0.25)
+gs_sliders = gs_main[1].subgridspec(5, 1, hspace=0.02, wspace=0.25)
 
 # Create 2x2 plot axes
 axs_main = np.empty((2, 2), dtype=object)
@@ -45,18 +47,18 @@ axs_main[0, 1] = fig_main.add_subplot(gs_plots[0, 1])
 axs_main[1, 0] = fig_main.add_subplot(gs_plots[1, 0])
 axs_main[1, 1] = fig_main.add_subplot(gs_plots[1, 1])
 
-fig_side, axs_side = plt.subplots(1, 2, figsize=(12, 5))
+fig_side, axs_side = plt.subplots(1, 3, figsize=(18, 5))
 
 # ─── Calculate F_out based on theoretical model ────────────────────────────────────────────────────────────────
-def calc_F_out(F_in, eta, F_guide, F_joint, n, is_loading=True):
+def calc_F_out(F_in, eta, F_guide, F_joint, F_tare, n, is_loading=True):
     sign = -1.0 if is_loading else 1.0
     F_static = F_guide + n * F_joint
-    return (eta**n) * F_in + sign * F_static
+    return (eta**n) * F_in + sign * F_static + F_tare
 
 # ─── Create plots to update dynamically later ────────────────────────────────────────────────────────────────
 # Plot 1: F_out/F_in vs F_in
-F_out_load1 = calc_F_out(F_in_space, eta_init, F_guide_init, F_joint_init, n_init, True)
-F_out_unload1 = calc_F_out(F_in_space, eta_init, F_guide_init, F_joint_init, n_init, False)
+F_out_load1 = calc_F_out(F_in_space, eta_init, F_guide_init, F_joint_init, F_tare_init, n_init, True)
+F_out_unload1 = calc_F_out(F_in_space, eta_init, F_guide_init, F_joint_init, F_tare_init, n_init, False)
 line1_load, = axs_main[0, 0].plot(F_in_space, F_out_load1/F_in_space, 'b--')
 line1_unload, = axs_main[0, 0].plot(F_in_space, F_out_unload1/F_in_space, 'r--')
 axs_main[0, 0].set_title(r"Efficiency $\epsilon$ vs $F_{in}$")
@@ -126,7 +128,7 @@ def get_F_joint_theta(f_j, l_off):
     return f_j * (1.0 + l_off / 24.0)
 
 f_j_theta = get_F_joint_theta(F_joint_init, l_off_space)
-F_out_load3 = calc_F_out(300, eta_init, F_guide_init, f_j_theta, n_init, True)
+F_out_load3 = calc_F_out(300, eta_init, F_guide_init, f_j_theta, F_tare_init, n_init, True)
 line3_load, = axs_side[0].plot(l_off_space, F_out_load3/300, 'b--')
 axs_side[0].set_title(r"Efficiency $\epsilon$ vs $l_{offset}$ [at $F_{in}=300g$]")
 axs_side[0].set_xlabel("$l_{offset}$ (mm)")
@@ -135,7 +137,7 @@ axs_side[0].grid(True, linestyle=':', alpha=0.6)
 line3_ideal = axs_side[0].axhline(1.0, color='k', linestyle=':', linewidth=1.5, label='Ideal $F_{out}=F_{in}$')
 
 # Plot 4: F_out/F_in vs n in separate figure
-F_out_load4 = calc_F_out(300, eta_init, F_guide_init, F_joint_init, n_space, True)
+F_out_load4 = calc_F_out(300, eta_init, F_guide_init, F_joint_init, F_tare_init, n_space, True)
 line4_load, = axs_side[1].plot(n_space, F_out_load4/300, 'b--')
 axs_side[1].set_title(r"Efficiency $\epsilon$ vs $n$ [at $F_{in}=300g$]")
 axs_side[1].set_xlabel("Number of Links $n$")
@@ -143,6 +145,17 @@ axs_side[1].set_ylabel(r"Efficiency $\epsilon = F_{out}/F_{in}$")
 axs_side[1].set_xticks(n_space)
 axs_side[1].grid(True, linestyle=':', alpha=0.6)
 line4_ideal = axs_side[1].axhline(1.0, color='k', linestyle=':', linewidth=1.5, label='Ideal $F_{out}=F_{in}$')
+
+# Plot 7: average efficiency (epsilon_load+epsilon_unload)/2 vs F_in
+F_out_load7 = calc_F_out(F_in_space, eta_init, F_guide_init, F_joint_init, F_tare_init, n_init, True)
+F_out_unload7 = calc_F_out(F_in_space, eta_init, F_guide_init, F_joint_init, F_tare_init, n_init, False)
+eps_avg_theory = 0.5 * ((F_out_load7 / F_in_space) + (F_out_unload7 / F_in_space))
+line7_avg, = axs_side[2].plot(F_in_space, eps_avg_theory, 'g--', label='Model average')
+axs_side[2].set_title(r"Average Efficiency $\bar{\epsilon}$ vs $F_{in}$")
+axs_side[2].set_xlabel('$F_{in}$ (g)')
+axs_side[2].set_ylabel(r"Average Efficiency $\bar{\epsilon}=\frac{\epsilon_{load}+\epsilon_{unload}}{2}$")
+axs_side[2].grid(True, linestyle=':', alpha=0.6)
+line7_ideal = axs_side[2].axhline(1.0, color='k', linestyle=':', linewidth=1.5, label=r'Ideal $\bar{\epsilon}=1$')
 
 # Plot 5: hysteresis absolute vs F_in
 hyst_abs_init = 2.0 * (F_guide_init + n_init * F_joint_init)
@@ -178,6 +191,12 @@ if not metrics_df.empty:
 
     scatter3_load = axs_side[0].scatter(points_at_300['l_offset'], points_at_300['epsilon_load'], facecolors='none', edgecolors='b', marker='o', s=20, label='Data load $F_{in}=300$')
     scatter4_load = axs_side[1].scatter(avg_points_at_300['n_units'], avg_points_at_300['epsilon_load'], facecolors='none', edgecolors='k', marker='s', s=20, label='Data avg $F_{in}=300$')
+    avg_points = metrics_df.dropna(subset=['F_in_g', 'epsilon_load', 'epsilon_unload'])
+    if not avg_points.empty:
+        scatter7_avg = axs_side[2].scatter(
+            avg_points['F_in_g'],
+            0.5 * (avg_points['epsilon_load'] + avg_points['epsilon_unload']),
+            facecolors='none', edgecolors='g', marker='o', s=30, label='Data avg')
     scatter5 = axs_main[1, 0].scatter(load_points['F_in_g'], load_points['delta_F_g'], facecolors='none', edgecolors='m', marker='D', s=20, label='Data ΔF')
     scatter6 = axs_main[1, 1].scatter(load_points['F_in_g'], load_points['H_pct'], facecolors='none', edgecolors='m', marker='D', s=20, label='Data H_pct')
 
@@ -185,22 +204,25 @@ if not metrics_df.empty:
 ax_eta = fig_main.add_subplot(gs_sliders[0])
 ax_F_guide = fig_main.add_subplot(gs_sliders[1])
 ax_F_joint = fig_main.add_subplot(gs_sliders[2])
-ax_n = fig_main.add_subplot(gs_sliders[3])
+ax_F_tare = fig_main.add_subplot(gs_sliders[3])
+ax_n = fig_main.add_subplot(gs_sliders[4])
 
 slider_eta = Slider(ax_eta, r'Efficiency $\eta$', 0.70, 1.0, valinit=eta_init, valfmt='%1.2f')
 slider_F_guide = Slider(ax_F_guide, '$F_{guide}$ (g)', 0.0, 50.0, valinit=F_guide_init, valfmt='%1.1f')
-slider_F_joint = Slider(ax_F_joint, '$f_{joint}$ (g)', 0.0, 20.0, valinit=F_joint_init, valfmt='%1.1f')
+slider_F_joint = Slider(ax_F_joint, '$F_{joint}$ (g)', 0.0, 20.0, valinit=F_joint_init, valfmt='%1.1f')
+slider_F_tare = Slider(ax_F_tare, '$F_{tare}$ (g)', 0.0, 30.0, valinit=F_tare_init, valfmt='%1.1f')
 slider_n = Slider(ax_n, '$n$', 1, 4, valinit=n_init, valstep=1, valfmt='%0.0f')
 
 def update_plots(val):
     eta = slider_eta.val
     F_guide = slider_F_guide.val
     F_joint = slider_F_joint.val
+    F_tare = slider_F_tare.val
     n_current = int(slider_n.val)
     
     # Update Plot 1 & 2 in the main interactive figure
-    l_load = calc_F_out(F_in_space, eta, F_guide, F_joint, n_current, True)
-    ul_load = calc_F_out(F_in_space, eta, F_guide, F_joint, n_current, False)
+    l_load = calc_F_out(F_in_space, eta, F_guide, F_joint, F_tare, n_current, True)
+    ul_load = calc_F_out(F_in_space, eta, F_guide, F_joint, F_tare, n_current, False)
     
     line1_load.set_ydata(l_load / F_in_space)
     line1_unload.set_ydata(ul_load / F_in_space)
@@ -249,11 +271,17 @@ def update_plots(val):
 
     # Update the separate static plots 3 and 4 for results
     fj_t = get_F_joint_theta(F_joint, l_off_space)
-    l_load3 = calc_F_out(300, eta, F_guide, fj_t, n_current, True)
+    l_load3 = calc_F_out(300, eta, F_guide, fj_t, F_tare, n_current, True)
     line3_load.set_ydata(l_load3 / 300)
 
-    l_load4 = calc_F_out(300, eta, F_guide, F_joint, n_space, True)
+    l_load4 = calc_F_out(300, eta, F_guide, F_joint, F_tare, n_space, True)
     line4_load.set_ydata(l_load4 / 300)
+
+    # Update Plot 7: average efficiency (epsilon_load+epsilon_unload)/2 vs F_in
+    l_load7 = calc_F_out(F_in_space, eta, F_guide, F_joint, F_tare, n_current, True)
+    ul_load7 = calc_F_out(F_in_space, eta, F_guide, F_joint, F_tare, n_current, False)
+    eps_avg_up = 0.5 * ((l_load7 / F_in_space) + (ul_load7 / F_in_space))
+    line7_avg.set_ydata(eps_avg_up)
 
     # Update hysteresis plots
     hyst_abs = 2.0 * (F_guide + n_current * F_joint)
@@ -267,6 +295,7 @@ def update_plots(val):
 slider_eta.on_changed(update_plots)
 slider_F_guide.on_changed(update_plots)
 slider_F_joint.on_changed(update_plots)
+slider_F_tare.on_changed(update_plots)
 slider_n.on_changed(update_plots)
 
 axs_main[0, 0].legend(loc='lower right')
@@ -275,4 +304,5 @@ axs_main[1, 0].legend(loc='upper right')
 axs_main[1, 1].legend(loc='upper right')
 axs_side[0].legend(loc='upper right')
 axs_side[1].legend(loc='upper right')
+axs_side[2].legend(loc='upper right')
 plt.show()
