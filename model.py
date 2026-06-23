@@ -7,12 +7,12 @@ from matplotlib.patches import FancyArrowPatch
 
 # ─── User Inputs ────────────────────────────────────────────────────────────────
 # Initialize model parameters
-eta_init = 0.99
-F_guide_init = 8.5
-F_joint_init = 1.5
-F_tare_init = 0.0
+eta_init = 0.83
+F_guide_init = 13.8
+F_joint_init = 0
+F_tare_init = 7.5
 n_init = 2
-l_offset_init = 10.0  # representing geometry proxy for theta
+l_offset_init = 10.0
 
 # Generate ranges for a smooth theoretical layout
 F_in_space = np.linspace(50, 500, 200)
@@ -22,6 +22,7 @@ F_tare_space = np.linspace(0, 30, 5)
 
 # Path to the metrics CSV file used for overlaying experimental data points.
 # Change this file path to the desired data file.
+#metrics_file = "data/Analysis/2026-06-15_OpeningAngleVariation/metrics.csv"
 metrics_file = "data/Analysis/2026-06-16_HighFrictionTest/metrics.csv"
 if os.path.exists(metrics_file):
     metrics_df = pd.read_csv(metrics_file)
