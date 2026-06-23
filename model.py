@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from matplotlib.patches import FancyArrowPatch
 
+
 # ─── User Inputs ────────────────────────────────────────────────────────────────
 # Initialize model parameters
 eta_init = 0.83
@@ -13,6 +14,8 @@ F_joint_init = 0
 F_tare_init = 7.5
 n_init = 2
 l_offset_init = 10.0
+l_curve_init = 'N/A'
+label_init = 'N/A'
 
 # Generate ranges for a smooth theoretical layout
 F_in_space = np.linspace(50, 500, 200)
@@ -21,13 +24,37 @@ l_off_space = np.linspace(0, 24, 25)
 F_tare_space = np.linspace(0, 30, 5)
 
 # Path to the metrics CSV file used for overlaying experimental data points.
-# Change this file path to the desired data file.
-#metrics_file = "data/Analysis/2026-06-15_OpeningAngleVariation/metrics.csv"
-metrics_file = "data/Analysis/2026-06-16_HighFrictionTest/metrics.csv"
+#ANALYSIS_DIR = "data/Analysis/2026-05-29_DesignValidationTest"
+ANALYSIS_DIR = "data/Analysis/2026-06-10_LinkNumberVariation"
+#ANALYSIS_DIR = "data/Analysis/2026-06-15_OpeningAngleVariation"
+#ANALYSIS_DIR = "data/Analysis/2026-06-16_HighFrictionTest"
+metrics_file = os.path.join(ANALYSIS_DIR, "metrics.csv")
 if os.path.exists(metrics_file):
     metrics_df = pd.read_csv(metrics_file)
 else:
     metrics_df = pd.DataFrame()
+# update F_in range
+F_in_space = np.linspace(metrics_df['F_in_g'].min(), metrics_df['F_in_g'].max(), 200) if not metrics_df.empty else F_in_space
+
+# ─── Parameters to fitted values ──────────────────────────────────────────────────────────────── 
+regression_file = os.path.join(ANALYSIS_DIR, "Regression", "fitted_params_per_config.csv")
+config_index_init = 1  # index of the configuration to load from regression results
+regression_df = None
+max_config_index = 1
+
+if os.path.exists(regression_file):
+    regression_df = pd.read_csv(regression_file)
+    max_config_index = len(regression_df) - 1
+    eta_init = regression_df.loc[config_index_init, 'eta']
+    F_guide_init = regression_df.loc[config_index_init, 'F_guide']
+    F_joint_init = regression_df.loc[config_index_init, 'F_joint']
+    F_tare_init = regression_df.loc[config_index_init, 'F_tare']
+    n_init = int(regression_df.loc[config_index_init, 'n_units'])
+    l_offset_init = regression_df.loc[config_index_init, 'l_offset'] if 'l_offset' in regression_df.columns else 10.0
+    l_curve_init = regression_df.loc[config_index_init, 'l_curve'] if 'l_curve' in regression_df.columns else 'N/A'
+    label_init = regression_df.loc[config_index_init, 'label'] if 'label' in regression_df.columns else 'N/A'
+
+current_n = n_init
 
 # ─── Initialize figure layout ────────────────────────────────────────────────────────────────
 fig_main = plt.figure(figsize=(12, 11))
@@ -38,8 +65,10 @@ gs_main = fig_main.add_gridspec(2, 1, height_ratios=[3, 0.4], hspace=0.3, left=0
 # Gridspec for 2x2 plots with normal spacing
 gs_plots = gs_main[0].subgridspec(2, 2, hspace=0.5, wspace=0.25)
 
-# Gridspec for sliders with tight spacing
-gs_sliders = gs_main[1].subgridspec(5, 1, hspace=0.02, wspace=0.25)
+# Gridspec for bottom controls split into Left (sliders) and Right (config + params)
+gs_bottom = gs_main[1].subgridspec(1, 2, wspace=0.3)
+gs_left = gs_bottom[0].subgridspec(4, 1, hspace=0.1)
+gs_right = gs_bottom[1].subgridspec(2, 1, hspace=0.2, height_ratios=[1, 1])
 
 # Create 2x2 plot axes
 axs_main = np.empty((2, 2), dtype=object)
@@ -80,13 +109,10 @@ line2_ideal = axs_main[0, 1].axhline(0.0, color='k', linestyle=':', linewidth=1.
 
 # ────────────────────────────────────────────────────────────────
 # Arrow indicators for direction on hysteresis plots
-# choose stable x positions (15% and 85% of F_in range) and a horizontal offset for arrow length
 _arrow_x_right = F_in_space[int(len(F_in_space) * 0.85)]
 _arrow_x_left = F_in_space[int(len(F_in_space) * 0.15)]
-# horizontal arrow helper (legacy values retained)
 _arrow_dx = (F_in_space[1] - F_in_space[0]) * 40  # horizontal arrow length in data units
 
-# center x and small arrow half-length
 _center_idx = len(F_in_space) // 2
 _x_center = F_in_space[_center_idx]
 _arrow_half_len = (F_in_space.max() - F_in_space.min()) * 0.02
@@ -101,11 +127,10 @@ def _make_center_tangent_arrow(ax, x_center, y_vals, x_vals, color, reverse=Fals
     end = (x_center + dx, y_center + dy)
     if reverse:
         start, end = end, start
-    # filled, slightly larger tip
     arr = FancyArrowPatch(start, end,
-                         arrowstyle='Simple,head_length=10,head_width=8,tail_width=1',
-                         edgecolor=color, facecolor=color,
-                         mutation_scale=0.7, linewidth=0.6, zorder=5)
+                          arrowstyle='Simple,head_length=10,head_width=8,tail_width=1',
+                          edgecolor=color, facecolor=color,
+                          mutation_scale=0.7, linewidth=0.6, zorder=5)
     ax.add_patch(arr)
     return arr
 
@@ -124,7 +149,6 @@ arrow2_unload = _make_center_tangent_arrow(axs_main[0, 1], _x_center, loss_unloa
 # ────────────────────────────────────────────────────────────────
 
 # Plot 3: F_out/F_in vs l_offset (proxy for theta) in separate figure
-# Assuming linear increase of F_joint with increasing l_offset based on notes
 def get_F_joint_theta(f_j, l_off):
     return f_j * (1.0 + l_off / 24.0)
 
@@ -202,24 +226,62 @@ if not metrics_df.empty:
     scatter6 = axs_main[1, 1].scatter(load_points['F_in_g'], load_points['H_pct'], facecolors='none', edgecolors='m', marker='D', s=20, label='Data H_pct')
 
 # ─── Interactive Sliders Configuration ────────────────────────────────────────────────────────────────
-ax_eta = fig_main.add_subplot(gs_sliders[0])
-ax_F_guide = fig_main.add_subplot(gs_sliders[1])
-ax_F_joint = fig_main.add_subplot(gs_sliders[2])
-ax_F_tare = fig_main.add_subplot(gs_sliders[3])
-ax_n = fig_main.add_subplot(gs_sliders[4])
+ax_eta = fig_main.add_subplot(gs_left[0])
+ax_F_guide = fig_main.add_subplot(gs_left[1])
+ax_F_joint = fig_main.add_subplot(gs_left[2])
+ax_F_tare = fig_main.add_subplot(gs_left[3])
 
+ax_config = fig_main.add_subplot(gs_right[0])
+ax_params = fig_main.add_subplot(gs_right[1])
+ax_params.axis('off')
+
+slider_config = Slider(ax_config, 'Config Index', 0, max_config_index, valinit=config_index_init, valstep=1, valfmt='%0.0f')
 slider_eta = Slider(ax_eta, r'Efficiency $\eta$', 0.70, 1.0, valinit=eta_init, valfmt='%1.2f')
 slider_F_guide = Slider(ax_F_guide, '$F_{guide}$ (g)', 0.0, 50.0, valinit=F_guide_init, valfmt='%1.1f')
 slider_F_joint = Slider(ax_F_joint, '$F_{joint}$ (g)', 0.0, 20.0, valinit=F_joint_init, valfmt='%1.1f')
 slider_F_tare = Slider(ax_F_tare, '$F_{tare}$ (g)', 0.0, 30.0, valinit=F_tare_init, valfmt='%1.1f')
-slider_n = Slider(ax_n, '$n$', 1, 4, valinit=n_init, valstep=1, valfmt='%0.0f')
+
+def update_param_text(n, l_offset, l_curve, label):
+    text_str = f"n: {n}   |   l_offset: {l_offset} mm   |   l_curve: {l_curve}   |   label: {label}"
+    ax_params.clear()
+    ax_params.axis('off')
+    ax_params.text(0.0, 0.5, text_str, transform=ax_params.transAxes, fontsize=10, va='center', ha='left', weight='bold', color='#333333')
+
+# Show initial parameters for configuration
+update_param_text(current_n, l_offset_init, l_curve_init, label_init)
+
+def load_config_from_regression(config_idx):
+    """Load parameters from regression file for the given configuration index."""
+    global current_n
+    if regression_df is not None and 0 <= config_idx <= max_config_index:
+        try:
+            eta = regression_df.loc[config_idx, 'eta']
+            F_guide = regression_df.loc[config_idx, 'F_guide']
+            F_joint = regression_df.loc[config_idx, 'F_joint']
+            F_tare = regression_df.loc[config_idx, 'F_tare']
+            current_n = int(regression_df.loc[config_idx, 'n_units'])
+            
+            l_offset = regression_df.loc[config_idx, 'l_offset'] if 'l_offset' in regression_df.columns else 'N/A'
+            l_curve = regression_df.loc[config_idx, 'l_curve'] if 'l_curve' in regression_df.columns else 'N/A'
+            label = regression_df.loc[config_idx, 'label'] if 'label' in regression_df.columns else 'N/A'
+            
+            # Update sliders to loaded values
+            slider_eta.set_val(eta)
+            slider_F_guide.set_val(F_guide)
+            slider_F_joint.set_val(F_joint)
+            slider_F_tare.set_val(F_tare)
+            
+            # Update configuration readout dashboard
+            update_param_text(current_n, l_offset, l_curve, label)
+        except Exception as e:
+            print(f"Error loading config {config_idx}: {e}")
 
 def update_plots(val):
     eta = slider_eta.val
     F_guide = slider_F_guide.val
     F_joint = slider_F_joint.val
     F_tare = slider_F_tare.val
-    n_current = int(slider_n.val)
+    n_current = current_n
     
     # Update Plot 1 & 2 in the main interactive figure
     l_load = calc_F_out(F_in_space, eta, F_guide, F_joint, F_tare, n_current, True)
@@ -247,7 +309,6 @@ def update_plots(val):
         y_center_load = np.interp(_x_center, F_in_space, eps_load_up)
         y_center_un = np.interp(_x_center, F_in_space, eps_unload_up)
         arrow1_load.set_positions((_x_center - dx_load, y_center_load - dy_load), (_x_center + dx_load, y_center_load + dy_load))
-        # unloading arrow should point left: set positions reversed
         arrow1_unload.set_positions((_x_center + dx_un, y_center_un + dy_un), (_x_center - dx_un, y_center_un - dy_un))
 
         # plot 2 (loss)
@@ -264,7 +325,6 @@ def update_plots(val):
         y_c_l = np.interp(_x_center, F_in_space, loss_load_up)
         y_c_l_un = np.interp(_x_center, F_in_space, loss_unload_up)
         arrow2_load.set_positions((_x_center - dx_l, y_c_l - dy_l), (_x_center + dx_l, y_c_l + dy_l))
-        # unloading arrow should point left: set positions reversed
         arrow2_unload.set_positions((_x_center + dx_l_un, y_c_l_un + dy_l_un), (_x_center - dx_l_un, y_c_l_un - dy_l_un))
     except Exception:
         pass
@@ -297,7 +357,7 @@ slider_eta.on_changed(update_plots)
 slider_F_guide.on_changed(update_plots)
 slider_F_joint.on_changed(update_plots)
 slider_F_tare.on_changed(update_plots)
-slider_n.on_changed(update_plots)
+slider_config.on_changed(lambda val: load_config_from_regression(int(slider_config.val)))
 
 axs_main[0, 0].legend(loc='lower right')
 axs_main[0, 1].legend(loc='upper right')
