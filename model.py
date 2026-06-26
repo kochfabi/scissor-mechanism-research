@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from matplotlib.widgets import Slider
 from matplotlib.patches import FancyArrowPatch
 
@@ -25,9 +26,11 @@ F_tare_space = np.linspace(0, 30, 5)
 
 # Path to the metrics CSV file used for overlaying experimental data points.
 #ANALYSIS_DIR = "data/Analysis/2026-05-29_DesignValidationTest"
-ANALYSIS_DIR = "data/Analysis/2026-06-10_LinkNumberVariation"
+#ANALYSIS_DIR = "data/Analysis/2026-06-10_LinkNumberVariation"
 #ANALYSIS_DIR = "data/Analysis/2026-06-15_OpeningAngleVariation"
-#ANALYSIS_DIR = "data/Analysis/2026-06-16_HighFrictionTest"
+ANALYSIS_DIR = "data/Analysis/2026-06-16_HighFrictionTest"
+#ANALYSIS_DIR = "data/Analysis/2026-06-24_CurvilinearLinkNumberVariation"
+#ANALYSIS_DIR = "data/Analysis/analysis"
 metrics_file = os.path.join(ANALYSIS_DIR, "metrics.csv")
 if os.path.exists(metrics_file):
     metrics_df = pd.read_csv(metrics_file)
@@ -38,7 +41,7 @@ F_in_space = np.linspace(metrics_df['F_in_g'].min(), metrics_df['F_in_g'].max(),
 
 # ─── Parameters to fitted values ──────────────────────────────────────────────────────────────── 
 regression_file = os.path.join(ANALYSIS_DIR, "Regression", "fitted_params_per_config.csv")
-config_index_init = 1  # index of the configuration to load from regression results
+config_index_init = 0  # index of the configuration to load from regression results
 regression_df = None
 max_config_index = 1
 
@@ -55,6 +58,12 @@ if os.path.exists(regression_file):
     label_init = regression_df.loc[config_index_init, 'label'] if 'label' in regression_df.columns else 'N/A'
 
 current_n = n_init
+selected_config = {
+    'label': label_init,
+    'n_units': n_init,
+    'l_offset': l_offset_init,
+    'l_curve': l_curve_init,
+}
 
 # ─── Initialize figure layout ────────────────────────────────────────────────────────────────
 fig_main = plt.figure(figsize=(12, 11))
@@ -134,6 +143,24 @@ def _make_center_tangent_arrow(ax, x_center, y_vals, x_vals, color, reverse=Fals
     ax.add_patch(arr)
     return arr
 
+
+def get_selected_mask(df):
+    if df.empty:
+        return pd.Series(dtype=bool)
+    mask = pd.Series(True, index=df.index)
+    mask &= df['label'] == selected_config['label']
+    mask &= df['n_units'] == selected_config['n_units']
+    mask &= df['l_offset'] == selected_config['l_offset']
+    mask &= df['l_curve'] == selected_config['l_curve']
+    return mask
+
+
+def make_edgecolors(color, match_mask, alpha_match=1.0, alpha_other=0.18):
+    rgba_match = mcolors.to_rgba(color, alpha=alpha_match)
+    rgba_other = mcolors.to_rgba(color, alpha=alpha_other)
+    return np.vstack([rgba_match if m else rgba_other for m in match_mask])
+
+
 eps_load = F_out_load1 / F_in_space
 eps_unload = F_out_unload1 / F_in_space
 arrow1_load = _make_center_tangent_arrow(axs_main[0, 0], _x_center, eps_load, F_in_space, 'b', reverse=False)
@@ -200,6 +227,11 @@ axs_main[1, 1].set_ylim(0, 0.4)
 axs_main[1, 1].grid(True, linestyle=':', alpha=0.6)
 
 # ─── Overlay metric.csv data points on plots ────────────────────────────────────────────────────────────────
+
+# Define dummy update function so it exists globally even if metrics_df is empty
+def update_scatter_transparency():
+    pass
+
 if not metrics_df.empty:
     metrics_df.columns = metrics_df.columns.str.strip()
     metrics_df = metrics_df[metrics_df['F_in_g'].notna()]
@@ -207,23 +239,54 @@ if not metrics_df.empty:
     unload_points = metrics_df.dropna(subset=['F_in_g', 'epsilon_unload', 'F_out_unload_g'])
     points_at_300 = load_points[load_points['F_in_g'] == 300]
     avg_points_at_300 = points_at_300.groupby('n_units', as_index=False)['epsilon_load'].mean()
-
-    scatter1_load = axs_main[0, 0].scatter(load_points['F_in_g'], load_points['epsilon_load'], facecolors='none', edgecolors='b', marker='o', s=30, label='Data load')
-    scatter1_unload = axs_main[0, 0].scatter(unload_points['F_in_g'], unload_points['epsilon_unload'], facecolors='none', edgecolors='r', marker='s', s=30, label='Data unload')
-
-    scatter2_load = axs_main[0, 1].scatter(load_points['F_in_g'], load_points['F_in_g'] - load_points['F_out_load_g'], facecolors='none', edgecolors='b', marker='o', s=30)
-    scatter2_unload = axs_main[0, 1].scatter(unload_points['F_in_g'], unload_points['F_in_g'] - unload_points['F_out_unload_g'], facecolors='none', edgecolors='r', marker='s', s=30)
-
-    scatter3_load = axs_side[0].scatter(points_at_300['l_offset'], points_at_300['epsilon_load'], facecolors='none', edgecolors='b', marker='o', s=20, label='Data load $F_{in}=300$')
-    scatter4_load = axs_side[1].scatter(avg_points_at_300['n_units'], avg_points_at_300['epsilon_load'], facecolors='none', edgecolors='k', marker='s', s=20, label='Data avg $F_{in}=300$')
     avg_points = metrics_df.dropna(subset=['F_in_g', 'epsilon_load', 'epsilon_unload'])
+
+    mask_all = get_selected_mask(metrics_df)
+    load_mask = mask_all.loc[load_points.index]
+    unload_mask = mask_all.loc[unload_points.index]
+    points_300_mask = mask_all.loc[points_at_300.index]
+    avg_points_mask = mask_all.loc[avg_points.index]
+    avg_points_at_300_mask = avg_points_at_300['n_units'] == selected_config['n_units']
+
+    scatter1_load = axs_main[0, 0].scatter(load_points['F_in_g'], load_points['epsilon_load'], facecolors='none', edgecolors=make_edgecolors('b', load_mask), marker='o', s=30, label='Data load')
+    scatter1_unload = axs_main[0, 0].scatter(unload_points['F_in_g'], unload_points['epsilon_unload'], facecolors='none', edgecolors=make_edgecolors('r', unload_mask), marker='s', s=30, label='Data unload')
+
+    scatter2_load = axs_main[0, 1].scatter(load_points['F_in_g'], load_points['F_in_g'] - load_points['F_out_load_g'], facecolors='none', edgecolors=make_edgecolors('b', load_mask), marker='o', s=30)
+    scatter2_unload = axs_main[0, 1].scatter(unload_points['F_in_g'], unload_points['F_in_g'] - unload_points['F_out_unload_g'], facecolors='none', edgecolors=make_edgecolors('r', unload_mask), marker='s', s=30)
+
+    scatter3_load = axs_side[0].scatter(points_at_300['l_offset'], points_at_300['epsilon_load'], facecolors='none', edgecolors=make_edgecolors('b', points_300_mask), marker='o', s=20, label='Data load $F_{in}=300$')
+    scatter4_load = axs_side[1].scatter(avg_points_at_300['n_units'], avg_points_at_300['epsilon_load'], facecolors='none', edgecolors=make_edgecolors('k', avg_points_at_300_mask), marker='s', s=20, label='Data avg $F_{in}=300$')
+    
+    scatter7_avg = None
     if not avg_points.empty:
-        scatter7_avg = axs_side[2].scatter(
-            avg_points['F_in_g'],
-            0.5 * (avg_points['epsilon_load'] + avg_points['epsilon_unload']),
-            facecolors='none', edgecolors='g', marker='o', s=30, label='Data avg')
-    scatter5 = axs_main[1, 0].scatter(load_points['F_in_g'], load_points['delta_F_g'], facecolors='none', edgecolors='m', marker='D', s=20, label='Data ΔF')
-    scatter6 = axs_main[1, 1].scatter(load_points['F_in_g'], load_points['H_pct'], facecolors='none', edgecolors='m', marker='D', s=20, label='Data H_pct')
+        scatter7_avg = axs_side[2].scatter(avg_points['F_in_g'], 0.5 * (avg_points['epsilon_load'] + avg_points['epsilon_unload']), facecolors='none', edgecolors=make_edgecolors('g', avg_points_mask), marker='o', s=30, label='Data avg')
+
+    scatter5 = axs_main[1, 0].scatter(load_points['F_in_g'], load_points['delta_F_g'], facecolors='none', edgecolors=make_edgecolors('m', load_mask), marker='D', s=20, label='Data ΔF')
+
+    scatter6 = axs_main[1, 1].scatter(load_points['F_in_g'], load_points['H_pct'], facecolors='none', edgecolors=make_edgecolors('m', load_mask), marker='D', s=20, label='Data H_pct')
+
+    def update_scatter_transparency():
+        mask_all = get_selected_mask(metrics_df)
+        load_mask = mask_all.loc[load_points.index]
+        unload_mask = mask_all.loc[unload_points.index]
+        points_300_mask = mask_all.loc[points_at_300.index]
+        avg_points_mask = mask_all.loc[avg_points.index]
+        avg_points_at_300_mask = avg_points_at_300['n_units'] == selected_config['n_units']
+
+        scatter1_load.set_edgecolors(make_edgecolors('b', load_mask))
+        scatter1_unload.set_edgecolors(make_edgecolors('r', unload_mask))
+        scatter2_load.set_edgecolors(make_edgecolors('b', load_mask))
+        scatter2_unload.set_edgecolors(make_edgecolors('r', unload_mask))
+        scatter3_load.set_edgecolors(make_edgecolors('b', points_300_mask))
+        scatter4_load.set_edgecolors(make_edgecolors('k', avg_points_at_300_mask))
+        if scatter7_avg is not None:
+            scatter7_avg.set_edgecolors(make_edgecolors('g', avg_points_mask))
+        scatter5.set_edgecolors(make_edgecolors('m', load_mask))
+        scatter6.set_edgecolors(make_edgecolors('m', load_mask))
+        fig_main.canvas.draw_idle()
+        fig_side.canvas.draw_idle()
+
+    update_scatter_transparency()
 
 # ─── Interactive Sliders Configuration ────────────────────────────────────────────────────────────────
 ax_eta = fig_main.add_subplot(gs_left[0])
@@ -252,7 +315,7 @@ update_param_text(current_n, l_offset_init, l_curve_init, label_init)
 
 def load_config_from_regression(config_idx):
     """Load parameters from regression file for the given configuration index."""
-    global current_n
+    global current_n, selected_config
     if regression_df is not None and 0 <= config_idx <= max_config_index:
         try:
             eta = regression_df.loc[config_idx, 'eta']
@@ -265,6 +328,11 @@ def load_config_from_regression(config_idx):
             l_curve = regression_df.loc[config_idx, 'l_curve'] if 'l_curve' in regression_df.columns else 'N/A'
             label = regression_df.loc[config_idx, 'label'] if 'label' in regression_df.columns else 'N/A'
             
+            selected_config['label'] = label
+            selected_config['n_units'] = current_n
+            selected_config['l_offset'] = l_offset
+            selected_config['l_curve'] = l_curve
+
             # Update sliders to loaded values
             slider_eta.set_val(eta)
             slider_F_guide.set_val(F_guide)
@@ -273,6 +341,9 @@ def load_config_from_regression(config_idx):
             
             # Update configuration readout dashboard
             update_param_text(current_n, l_offset, l_curve, label)
+
+            update_scatter_transparency()
+
         except Exception as e:
             print(f"Error loading config {config_idx}: {e}")
 

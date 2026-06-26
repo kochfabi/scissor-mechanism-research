@@ -38,7 +38,7 @@ from scipy.optimize import curve_fit
 
 PROJECT_ROOT  = Path(__file__).resolve().parent
 DATA_DIR      = PROJECT_ROOT / "data"
-ANALYSIS_DIR  = DATA_DIR / "Analysis" / "2026-05-29_DesignValidationTest"
+ANALYSIS_DIR  = DATA_DIR / "Analysis" / "analysis"
 OUTPUT_DIR    = ANALYSIS_DIR / "Regression"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
