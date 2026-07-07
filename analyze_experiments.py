@@ -156,7 +156,7 @@ def compute_metrics(dataset: dict) -> dict:
       label           – human-readable label from metadata
       loading         – dict {F_in: {"epsilon", "mean_force_g", "std_force_g"}}
       unloading       – dict {F_in: {"epsilon", "mean_force_g", "std_force_g"}}
-      hysteresis      – dict {F_in: {"delta_F_g", "H_pct"}}   (only where both paths exist)
+      hysteresis      – dict {F_in: {"delta_F_g", "H_norm"}}   (only where both paths exist)
       mean_eps_load   – float
       mean_eps_unload – float
       zero_residuals  – list of mean_force_g from zero-load trials
@@ -201,7 +201,7 @@ def compute_metrics(dataset: dict) -> dict:
             delta = unloading[fin]["mean_force_g"] - loading[fin]["mean_force_g"]
             hysteresis[fin] = {
                 "delta_F_g": delta,
-                "H_pct":     delta / fin if fin != 0 else None,
+                "H_norm":     delta / fin if fin != 0 else None,
             }
 
     mean_eps_load   = float(np.mean([v["epsilon"] for v in loading.values()   if v["epsilon"] is not None])) if loading   else None
@@ -263,7 +263,7 @@ def print_statistics(all_metrics: list[dict]):
             fu  = f"{ul['mean_force_g']:>13.2f}"  if ul  else f"{'—':>13}"
             eu  = f"{ul['epsilon']:>10.4f}"        if ul and ul["epsilon"] else f"{'—':>10}"
             dF  = f"{hy['delta_F_g']:>8.2f}"       if hy  else f"{'—':>8}"
-            hp  = f"{hy['H_pct']:>6.1f}%"          if hy and hy["H_pct"] is not None else f"{'—':>7}"
+            hp  = f"{hy['H_norm']:>6.1f}%"          if hy and hy["H_norm"] is not None else f"{'—':>7}"
 
             print(f"  {fin:>8.0f}  {fl}  {el}  {fu}  {eu}  {dF}  {hp}")
 
@@ -441,7 +441,7 @@ def export_metrics_csv(all_metrics: list[dict], output_dir: str):
             "F_in_g",
             "F_out_load_g", "epsilon_load",
             "F_out_unload_g", "epsilon_unload",
-            "delta_F_g", "H_pct",
+            "delta_F_g", "H_norm",
         ])
 
         for m in all_metrics:
@@ -462,7 +462,7 @@ def export_metrics_csv(all_metrics: list[dict], output_dir: str):
                     f"{ul['mean_force_g']:.4f}" if ul else "",
                     f"{ul['epsilon']:.6f}"       if ul and ul["epsilon"] else "",
                     f"{hy['delta_F_g']:.4f}"    if hy else "",
-                    f"{hy['H_pct']:.3f}"        if hy and hy["H_pct"] is not None else "",
+                    f"{hy['H_norm']:.3f}"        if hy and hy["H_norm"] is not None else "",
                 ])
 
     # Per-configuration summary table

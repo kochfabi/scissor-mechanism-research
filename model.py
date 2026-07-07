@@ -18,19 +18,33 @@ l_offset_init = 10.0
 l_curve_init = 'N/A'
 label_init = 'N/A'
 
+# scissor unit geometry
+L_Link = 0.1000     #[m]
+C_friction = 0.0018 #[m] 4*mu*r
+
+
 # Generate ranges for a smooth theoretical layout
 F_in_space = np.linspace(50, 500, 200)
 n_space = np.arange(1, 5, 1)
 l_off_space = np.linspace(0, 24, 25)
 F_tare_space = np.linspace(0, 30, 5)
 
+def calc_theta_deg(l_off):
+    return np.arccos((44+2*l_off)/ 100.0)
+
+def calc_eta_theta(l_off, C=C_friction, L=L_Link):
+    theta_rad = calc_theta_deg(l_off)
+    return 1 - C / (L * np.sin(theta_rad))
+
+eta_space = calc_eta_theta(l_off_space)
+
 # Path to the metrics CSV file used for overlaying experimental data points.
 #ANALYSIS_DIR = "data/Analysis/2026-05-29_DesignValidationTest"
 #ANALYSIS_DIR = "data/Analysis/2026-06-10_LinkNumberVariation"
 #ANALYSIS_DIR = "data/Analysis/2026-06-15_OpeningAngleVariation"
-ANALYSIS_DIR = "data/Analysis/2026-06-16_HighFrictionTest"
+#ANALYSIS_DIR = "data/Analysis/2026-06-16_HighFrictionTest"
 #ANALYSIS_DIR = "data/Analysis/2026-06-24_CurvilinearLinkNumberVariation"
-#ANALYSIS_DIR = "data/Analysis/analysis"
+ANALYSIS_DIR = "data/Analysis/analysis"
 metrics_file = os.path.join(ANALYSIS_DIR, "metrics.csv")
 if os.path.exists(metrics_file):
     metrics_df = pd.read_csv(metrics_file)
@@ -87,6 +101,7 @@ axs_main[1, 0] = fig_main.add_subplot(gs_plots[1, 0])
 axs_main[1, 1] = fig_main.add_subplot(gs_plots[1, 1])
 
 fig_side, axs_side = plt.subplots(1, 3, figsize=(18, 5))
+fig_side.subplots_adjust(bottom=0.25)
 
 # ─── Calculate F_out based on theoretical model ────────────────────────────────────────────────────────────────
 def calc_F_out(F_in, eta, F_guide, F_joint, F_tare, n, is_loading=True):
@@ -175,23 +190,20 @@ arrow2_load = _make_center_tangent_arrow(axs_main[0, 1], _x_center, loss_load, F
 arrow2_unload = _make_center_tangent_arrow(axs_main[0, 1], _x_center, loss_unload, F_in_space, 'r', reverse=True)
 # ────────────────────────────────────────────────────────────────
 
-# Plot 3: F_out/F_in vs l_offset (proxy for theta) in separate figure
-def get_F_joint_theta(f_j, l_off):
-    return f_j * (1.0 + l_off / 24.0)
-
-f_j_theta = get_F_joint_theta(F_joint_init, l_off_space)
-F_out_load3 = calc_F_out(300, eta_init, F_guide_init, f_j_theta, F_tare_init, n_init, True)
-line3_load, = axs_side[0].plot(l_off_space, F_out_load3/300, 'b--')
-axs_side[0].set_title(r"Efficiency $\epsilon$ vs $l_{offset}$ [at $F_{in}=300g$]")
+F_REF = 300.0  # reference input force for plots 3&4
+# Plot 3: F_out/F_in vs l_offset in separate figure
+F_out_load3 = calc_F_out(F_REF, eta_space, F_guide_init, F_joint_init, F_tare_init, n_init, True)
+line3_load, = axs_side[0].plot(l_off_space, F_out_load3/F_REF, 'b--', label=r'using $\eta(\theta) = 1-\frac{C}{L \cdot sin θ}$')
+axs_side[0].set_title(r"Efficiency $\epsilon$ vs $l_{offset}$ [at $F_{in}=" + f"{F_REF:.0f}" + r"g$]")
 axs_side[0].set_xlabel("$l_{offset}$ (mm)")
 axs_side[0].set_ylabel(r"Efficiency $\epsilon = F_{out}/F_{in}$")
 axs_side[0].grid(True, linestyle=':', alpha=0.6)
 line3_ideal = axs_side[0].axhline(1.0, color='k', linestyle=':', linewidth=1.5, label='Ideal $F_{out}=F_{in}$')
 
 # Plot 4: F_out/F_in vs n in separate figure
-F_out_load4 = calc_F_out(300, eta_init, F_guide_init, F_joint_init, F_tare_init, n_space, True)
-line4_load, = axs_side[1].plot(n_space, F_out_load4/300, 'b--')
-axs_side[1].set_title(r"Efficiency $\epsilon$ vs $n$ [at $F_{in}=300g$]")
+F_out_load4 = calc_F_out(F_REF, eta_init, F_guide_init, F_joint_init, F_tare_init, n_space, True)
+line4_load, = axs_side[1].plot(n_space, F_out_load4/F_REF, 'b--')
+axs_side[1].set_title(r"Efficiency $\epsilon$ vs $n$ [at $F_{in}=" + f"{F_REF:.0f}" + r"g$]")
 axs_side[1].set_xlabel("Number of Links $n$")
 axs_side[1].set_ylabel(r"Efficiency $\epsilon = F_{out}/F_{in}$")
 axs_side[1].set_xticks(n_space)
@@ -263,7 +275,7 @@ if not metrics_df.empty:
 
     scatter5 = axs_main[1, 0].scatter(load_points['F_in_g'], load_points['delta_F_g'], facecolors='none', edgecolors=make_edgecolors('m', load_mask), marker='D', s=20, label='Data ΔF')
 
-    scatter6 = axs_main[1, 1].scatter(load_points['F_in_g'], load_points['H_pct'], facecolors='none', edgecolors=make_edgecolors('m', load_mask), marker='D', s=20, label='Data H_pct')
+    scatter6 = axs_main[1, 1].scatter(load_points['F_in_g'], load_points['H_norm'], facecolors='none', edgecolors=make_edgecolors('m', load_mask), marker='D', s=20, label='Data H_norm')
 
     def update_scatter_transparency():
         mask_all = get_selected_mask(metrics_df)
@@ -293,6 +305,9 @@ ax_eta = fig_main.add_subplot(gs_left[0])
 ax_F_guide = fig_main.add_subplot(gs_left[1])
 ax_F_joint = fig_main.add_subplot(gs_left[2])
 ax_F_tare = fig_main.add_subplot(gs_left[3])
+# Position coordinates: [left, bottom, width, height]
+ax_C = fig_side.add_axes([0.125, 0.08, 0.227, 0.04]) 
+
 
 ax_config = fig_main.add_subplot(gs_right[0])
 ax_params = fig_main.add_subplot(gs_right[1])
@@ -303,6 +318,7 @@ slider_eta = Slider(ax_eta, r'Efficiency $\eta$', 0.70, 1.0, valinit=eta_init, v
 slider_F_guide = Slider(ax_F_guide, '$F_{guide}$ (g)', 0.0, 50.0, valinit=F_guide_init, valfmt='%1.1f')
 slider_F_joint = Slider(ax_F_joint, '$F_{joint}$ (g)', 0.0, 20.0, valinit=F_joint_init, valfmt='%1.1f')
 slider_F_tare = Slider(ax_F_tare, '$F_{tare}$ (g)', 0.0, 30.0, valinit=F_tare_init, valfmt='%1.1f')
+slider_C = Slider(ax_C, r'$C = 4\mu r$  (m)', 0.0005, 0.0050, valinit=C_friction, valfmt='%1.4f')
 
 def update_param_text(n, l_offset, l_curve, label):
     text_str = f"n: {n}   |   l_offset: {l_offset} mm   |   l_curve: {l_curve}   |   label: {label}"
@@ -352,6 +368,7 @@ def update_plots(val):
     F_guide = slider_F_guide.val
     F_joint = slider_F_joint.val
     F_tare = slider_F_tare.val
+    C_current = slider_C.val
     n_current = current_n
     
     # Update Plot 1 & 2 in the main interactive figure
@@ -402,12 +419,12 @@ def update_plots(val):
     # ────────────────────────────────────────────────────────────────
 
     # Update the separate static plots 3 and 4 for results
-    fj_t = get_F_joint_theta(F_joint, l_off_space)
-    l_load3 = calc_F_out(300, eta, F_guide, fj_t, F_tare, n_current, True)
-    line3_load.set_ydata(l_load3 / 300)
+    eta_theta_current = calc_eta_theta(l_off_space, C=C_current, L=L_Link)
+    l_load3 = calc_F_out(F_REF, eta_theta_current, F_guide, F_joint, F_tare, n_current, True)
+    line3_load.set_ydata(l_load3 / F_REF)
 
-    l_load4 = calc_F_out(300, eta, F_guide, F_joint, F_tare, n_space, True)
-    line4_load.set_ydata(l_load4 / 300)
+    l_load4 = calc_F_out(F_REF, eta, F_guide, F_joint, F_tare, n_space, True)
+    line4_load.set_ydata(l_load4 / F_REF)
 
     # Update Plot 7: average efficiency (epsilon_load+epsilon_unload)/2 vs F_in
     l_load7 = calc_F_out(F_in_space, eta, F_guide, F_joint, F_tare, n_current, True)
@@ -428,6 +445,7 @@ slider_eta.on_changed(update_plots)
 slider_F_guide.on_changed(update_plots)
 slider_F_joint.on_changed(update_plots)
 slider_F_tare.on_changed(update_plots)
+slider_C.on_changed(update_plots)
 slider_config.on_changed(lambda val: load_config_from_regression(int(slider_config.val)))
 
 axs_main[0, 0].legend(loc='lower right')
