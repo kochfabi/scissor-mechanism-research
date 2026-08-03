@@ -15,8 +15,8 @@ import numpy as np
 import openpyxl
 from plot_style import new_fig, COLOR_DATA, COLOR_TREND
 
-SRC = r"C:\Users\fabia\OneDrive - Science Tokyo\Documents\4-Software\data\Analysis\2026-06-26_HighFrictionTorqueWrench\Regression/analysis.xlsx"
-OUT = r"C:\Users\fabia\OneDrive - Science Tokyo\Documents\5-Presentation/figures/plot_eta_torque.png"
+SRC = r"C:\Users\Fabian\OneDrive - Science Tokyo\Documents\4-Software\data\Analysis\2026-06-26_HighFrictionTorqueWrench\Regression/analysis.xlsx"
+OUT = r"C:\Users\Fabian\OneDrive - Science Tokyo\Documents\5-Presentation/figures/plot_eta_torque.png"
 
 # ─── Load data ────────────────────────────────────────────────────────────
 wb = openpyxl.load_workbook(SRC, read_only=True, data_only=True)

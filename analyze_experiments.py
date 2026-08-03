@@ -1,12 +1,13 @@
 """
-compare_experiments.py
+analyze_experiments.py
 ----------------------
 Comparative analysis of scissor gripper force transmission experiments.
 
 Usage:
-    python compare_experiments.py <folder_path>
+    python analyze_experiments.py
 
-Scans <folder_path> recursively for all files named summary.csv,
+Set TARGET_FOLDER below to the directory you want to analyze.
+Scans TARGET_FOLDER recursively for all files named summary.csv,
 parses each one, and produces:
   1. Terminal statistics table
   2. Efficiency (ε) vs F_in comparison plot  [plot_epsilon.png]
@@ -14,7 +15,7 @@ parses each one, and produces:
   4. Exported metrics CSV                     [metrics.csv]
   5. Exported configuration summary CSV      [metrics_configuration.csv]
 
-All outputs are saved to <folder_path>/analysis/.
+All outputs are saved to TARGET_FOLDER/analysis/.
 """
 
 import sys
@@ -24,6 +25,8 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+
+TARGET_FOLDER = os.path.join(os.path.dirname(__file__), "data/Analysis")  # Change this to your target folder
 
 
 # ── 1. Parsing ────────────────────────────────────────────────────────────────
@@ -492,11 +495,7 @@ def export_metrics_csv(all_metrics: list[dict], output_dir: str):
 # ── 7. Main ───────────────────────────────────────────────────────────────────
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python compare_experiments.py <folder_path>")
-        sys.exit(1)
-
-    folder = sys.argv[1]
+    folder = TARGET_FOLDER
     if not os.path.isdir(folder):
         print(f"Error: '{folder}' is not a directory.")
         sys.exit(1)

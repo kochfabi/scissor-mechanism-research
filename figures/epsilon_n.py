@@ -61,7 +61,7 @@ for n in ns:
                       linewidth=1.4, markersize=5, zorder=3)
             
     # Add directional arrows for the loading branch (pointing right/forward)
-    for i in range(len(f_in) - 1):
+    """ for i in range(len(f_in) - 1):
         if pd.isna(eps_load[i]) or pd.isna(eps_load[i+1]):
             continue
         mid_fin = (f_in[i] + f_in[i+1]) / 2
@@ -69,7 +69,7 @@ for n in ns:
         dx = (f_in[i+1] - f_in[i]) * 0.01
         dy = (eps_load[i+1] - eps_load[i]) * 0.01
         ax.annotate("", xy=(mid_fin + dx, mid_eps + dy), xytext=(mid_fin - dx, mid_eps - dy),
-                    arrowprops=dict(arrowstyle="-|>", color=color, lw=1, alpha=0.8), zorder=4)
+                    arrowprops=dict(arrowstyle="-|>", color=color, lw=1, alpha=0.8), zorder=4) """
 
     # ─── Unloading Branch ───
     # We assign the plot object to `p_unload` to use it in the legend
@@ -77,7 +77,7 @@ for n in ns:
                         linewidth=1.4, markersize=5, markerfacecolor="white", zorder=3)
             
     # Add directional arrows for the unloading branch (pointing left/backward)
-    for i in range(len(f_in) - 1):
+    """ for i in range(len(f_in) - 1):
         if pd.isna(eps_unload[i]) or pd.isna(eps_unload[i+1]):
             continue
         mid_fin = (f_in[i] + f_in[i+1]) / 2
@@ -85,7 +85,7 @@ for n in ns:
         dx = (f_in[i+1] - f_in[i]) * 0.01
         dy = (eps_unload[i+1] - eps_unload[i]) * 0.01
         ax.annotate("", xy=(mid_fin - dx, mid_eps - dy), xytext=(mid_fin + dx, mid_eps + dy),
-                    arrowprops=dict(arrowstyle="-|>", color=color, lw=1, alpha=0.8), zorder=4)
+                    arrowprops=dict(arrowstyle="-|>", color=color, lw=1, alpha=0.8), zorder=4) """
 
     # Group the two line handles together as a tuple for this n's legend entry
     legend_handles.append((p_load, p_unload))
